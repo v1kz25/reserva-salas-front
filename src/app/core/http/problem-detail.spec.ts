@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import { aProblemDetail } from './problem-detail';
+import { aProblemDetail, clasificarErrorGrave } from './problem-detail';
 
 describe('aProblemDetail', () => {
   it('devuelve el cuerpo si tiene formato ProblemDetail', () => {
@@ -32,5 +32,23 @@ describe('aProblemDetail', () => {
 
   it('un error que no es HttpErrorResponse genera error inesperado', () => {
     expect(aProblemDetail(new Error('x')).title).toBe('Error inesperado');
+  });
+});
+
+describe('clasificarErrorGrave', () => {
+  const pd = (status: number) => ({ title: 'X', status });
+
+  it('clasifica los estados graves', () => {
+    expect(clasificarErrorGrave(new HttpErrorResponse({ status: 0 }))).toBe('no-disponible');
+    expect(clasificarErrorGrave(new HttpErrorResponse({ status: 503, error: pd(503) }))).toBe('no-disponible');
+    expect(clasificarErrorGrave(new HttpErrorResponse({ status: 500, error: '<html>' }))).toBe('no-disponible');
+    expect(clasificarErrorGrave(new HttpErrorResponse({ status: 500, error: pd(500) }))).toBe('inesperado');
+    expect(clasificarErrorGrave(new HttpErrorResponse({ status: 403 }))).toBe('sin-permiso');
+  });
+
+  it('los errores de cliente no son graves', () => {
+    for (const status of [400, 404, 409]) {
+      expect(clasificarErrorGrave(new HttpErrorResponse({ status, error: pd(status) }))).toBeUndefined();
+    }
   });
 });
