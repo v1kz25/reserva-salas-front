@@ -1,1 +1,162 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales mínimos de la aplicación. */
+:root {
+  --color-primario: #1f5fbf;
+  --color-error: #b3261e;
+  --color-aviso: #8a5a00;
+  --color-borde: #c9ccd1;
+  --radio-boton: 0.5rem;
+  --alto-control: 2.5rem;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1c1c1e;
+}
+
+body {
+  margin: 0;
+}
+
+.barra {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primario);
+
+  .marca {
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+}
+
+.contenido {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .campo {
+    margin-bottom: 0;
+  }
+
+  input,
+  select,
+  button {
+    box-sizing: border-box;
+    height: var(--alto-control);
+  }
+
+  .filtros-error {
+    flex-basis: 100%;
+  }
+
+  .filtros-error:empty {
+    display: none;
+  }
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+
+  input,
+  select,
+  textarea {
+    padding: 0.4rem;
+    font: inherit;
+    border: 1px solid var(--color-borde);
+    border-radius: 4px;
+  }
+
+  [aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.aviso {
+  color: var(--color-aviso);
+}
+
+.error-general {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: 4px;
+
+  p {
+    margin: 0.25rem 0;
+  }
+}
+
+.acciones {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+button,
+.boton,
+.boton-secundario {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  text-decoration: none;
+  border-radius: var(--radio-boton);
+  cursor: pointer;
+}
+
+.boton {
+  color: #fff;
+  background: var(--color-primario);
+  border: 1px solid var(--color-primario);
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.boton-secundario {
+  color: var(--color-primario);
+  background: #fff;
+  border: 1px solid var(--color-primario);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-borde);
+  }
+}
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
