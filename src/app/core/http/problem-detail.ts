@@ -33,7 +33,46 @@ export function aProblemDetail(error: unknown): ProblemDetail {
   };
 }
 
-function esProblemDetail(valor: unknown): valor is ProblemDetail {
+/**
+ * Tipo de error grave que la aplicación gestiona con una página propia.
+ *
+ * - `no-disponible`: no hay respuesta, gateway caído o 5xx sin `ProblemDetail` válido.
+ * - `inesperado`: 5xx con `ProblemDetail` válido (fallo controlado del backend).
+ * - `sin-permiso`: `403`.
+ */
+export type ErrorGrave = 'no-disponible' | 'inesperado' | 'sin-permiso';
+
+/** Estados que indican que el servicio no está disponible, tenga o no cuerpo. */
+const ESTADOS_NO_DISPONIBLE: readonly number[] = [0, 502, 503, 504];
+
+/**
+ * Clasifica un error HTTP como grave o no.
+ *
+ * Los errores que no son graves (`400`, `404`, `409`…) devuelven `undefined`
+ * y los sigue gestionando el componente que hizo la petición.
+ *
+ * @param error Error recibido de `HttpClient`.
+ * @returns El tipo de error grave o `undefined` si no lo es.
+ */
+export function clasificarErrorGrave(error: HttpErrorResponse): ErrorGrave | undefined {
+  if (ESTADOS_NO_DISPONIBLE.includes(error.status)) {
+    return 'no-disponible';
+  }
+  if (error.status === 403) {
+    return 'sin-permiso';
+  }
+  if (error.status >= 500 && error.status <= 599) {
+    return esProblemDetail(error.error) ? 'inesperado' : 'no-disponible';
+  }
+  return undefined;
+}
+
+/**
+ * Indica si un valor tiene la forma mínima de un `ProblemDetail` (RFC 9457): `title` y `status`.
+ *
+ * @param valor Cuerpo de la respuesta.
+ */
+export function esProblemDetail(valor: unknown): valor is ProblemDetail {
   return (
     typeof valor === 'object' &&
     valor !== null &&

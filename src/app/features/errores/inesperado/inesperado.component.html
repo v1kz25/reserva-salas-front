@@ -1,0 +1,14 @@
+<app-pagina-error titulo="Error inesperado">
+  <p>Se ha producido un error inesperado en el servidor. Inténtalo de nuevo más tarde.</p>
+  @if (problema(); as problema) {
+    <div class="error-general">
+      <p><strong>{{ problema.title }}</strong></p>
+      @if (problema.detail) {
+        <p>{{ problema.detail }}</p>
+      }
+    </div>
+  }
+  <div acciones>
+    <a routerLink="/reservas" class="boton">Ir a las reservas</a>
+  </div>
+</app-pagina-error>
