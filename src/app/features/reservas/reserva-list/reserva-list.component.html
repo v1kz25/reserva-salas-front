@@ -1,0 +1,89 @@
+<section aria-labelledby="titulo-reservas">
+  <header class="cabecera">
+    <h1 id="titulo-reservas">Reservas</h1>
+    <a routerLink="/reservas/nueva" class="boton">Nueva reserva</a>
+  </header>
+
+  <form [formGroup]="filtros" class="filtros" role="search" aria-label="Filtrar reservas">
+    <div class="campo">
+      <label for="filtro-sala">Sala</label>
+      <select id="filtro-sala" formControlName="salaId">
+        <option [ngValue]="null">Todas las salas</option>
+        @for (sala of salas(); track sala.id) {
+          <option [ngValue]="sala.id">{{ sala.nombre }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="campo">
+      <label for="filtro-fecha-desde">Fecha desde</label>
+      <input
+        id="filtro-fecha-desde"
+        type="date"
+        formControlName="fechaDesde"
+        [attr.aria-invalid]="filtros.hasError('rangoFechasInvalido')"
+        aria-describedby="filtro-fechas-error"
+      />
+    </div>
+
+    <div class="campo">
+      <label for="filtro-fecha-hasta">Fecha hasta</label>
+      <input
+        id="filtro-fecha-hasta"
+        type="date"
+        formControlName="fechaHasta"
+        [min]="filtros.controls.fechaDesde.value"
+        [attr.aria-invalid]="filtros.hasError('rangoFechasInvalido')"
+        aria-describedby="filtro-fechas-error"
+      />
+    </div>
+
+    <button type="button" class="boton-secundario" (click)="limpiarFiltros()">Limpiar filtros</button>
+
+    <div id="filtro-fechas-error" class="filtros-error" aria-live="polite">
+      @if (filtros.hasError('rangoFechasInvalido')) {
+        <p class="error">«Fecha hasta» no puede ser anterior a «Fecha desde».</p>
+      }
+    </div>
+  </form>
+
+  @if (errorSalas()) {
+    <p class="aviso" role="alert">No se han podido cargar las salas: {{ errorSalas() }}</p>
+  }
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando reservas…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    <table>
+      <caption class="visualmente-oculto">Listado de reservas</caption>
+      <thead>
+        <tr>
+          <th scope="col">Sala</th>
+          <th scope="col">Fecha</th>
+          <th scope="col">Inicio</th>
+          <th scope="col">Fin</th>
+          <th scope="col">Responsable</th>
+          <th scope="col">Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (reserva of reservas(); track reserva.id) {
+          <tr>
+            <td>{{ nombreSala(reserva.salaId) }}</td>
+            <td>{{ reserva.fecha | date: 'dd/MM/yyyy' }}</td>
+            <td>{{ reserva.horaInicio | hora }}</td>
+            <td>{{ reserva.horaFin | hora }}</td>
+            <td>{{ reserva.responsable }}</td>
+            <td>{{ reserva.motivo }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6">No hay reservas que cumplan los filtros.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

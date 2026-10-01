@@ -1,0 +1,191 @@
+<section aria-labelledby="titulo-nueva-reserva">
+  <h1 id="titulo-nueva-reserva">Nueva reserva</h1>
+
+  @if (errorSalas()) {
+    <p class="aviso" role="alert">No se han podido cargar las salas: {{ errorSalas() }}</p>
+  }
+
+  @if (errorGeneral(); as problema) {
+    <div class="error-general" role="alert">
+      @switch (problema.status) {
+        @case (409) {
+          <p><strong>La sala ya está reservada en esa franja horaria.</strong></p>
+        }
+        @case (404) {
+          <p><strong>La sala seleccionada ya no existe.</strong></p>
+        }
+        @case (400) {
+          <p><strong>Revisa los datos de la reserva.</strong></p>
+        }
+        @default {
+          <p><strong>{{ problema.title }}</strong></p>
+        }
+      }
+      @if (problema.detail) {
+        <p>{{ problema.detail }}</p>
+      }
+      @if (erroresSinCampo().length > 0) {
+        <ul>
+          @for (error of erroresSinCampo(); track error.campo) {
+            <li>{{ error.campo }}: {{ error.mensaje }}</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+    <div class="campo">
+      <label for="sala">Sala</label>
+      <select
+        id="sala"
+        formControlName="salaId"
+        [attr.aria-invalid]="mostrarError('salaId')"
+        aria-describedby="sala-error"
+      >
+        <option [ngValue]="undefined" disabled>Selecciona una sala</option>
+        @for (sala of salas(); track sala.id) {
+          <option [ngValue]="sala.id">{{ sala.nombre }} (planta {{ sala.planta }}, {{ sala.capacidad }} personas)</option>
+        }
+      </select>
+      <div id="sala-error" aria-live="polite">
+        @if (mostrarError('salaId')) {
+          @if (form.controls.salaId.hasError('required')) {
+            <p class="error">Selecciona una sala.</p>
+          }
+          @if (form.controls.salaId.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="fecha">Fecha</label>
+      <input
+        id="fecha"
+        type="date"
+        formControlName="fecha"
+        [min]="manana"
+        [attr.aria-invalid]="mostrarError('fecha')"
+        aria-describedby="fecha-error"
+      />
+      <div id="fecha-error" aria-live="polite">
+        @if (mostrarError('fecha')) {
+          @if (form.controls.fecha.hasError('required')) {
+            <p class="error">Indica la fecha.</p>
+          }
+          @if (form.controls.fecha.hasError('fechaNoPosteriorAHoy')) {
+            <p class="error">Solo se puede reservar a partir de mañana.</p>
+          }
+          @if (form.controls.fecha.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="hora-inicio">Hora de inicio</label>
+      <input
+        id="hora-inicio"
+        type="time"
+        formControlName="horaInicio"
+        [attr.aria-invalid]="mostrarError('horaInicio')"
+        aria-describedby="hora-inicio-error"
+      />
+      <div id="hora-inicio-error" aria-live="polite">
+        @if (mostrarError('horaInicio')) {
+          @if (form.controls.horaInicio.hasError('required')) {
+            <p class="error">Indica la hora de inicio.</p>
+          }
+          @if (form.controls.horaInicio.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="hora-fin">Hora de fin</label>
+      <input
+        id="hora-fin"
+        type="time"
+        formControlName="horaFin"
+        [attr.aria-invalid]="mostrarError('horaFin') || mostrarErrorGrupo('horaFinNoPosterior', 'horaInicio', 'horaFin')"
+        aria-describedby="hora-fin-error"
+      />
+      <div id="hora-fin-error" aria-live="polite">
+        @if (mostrarError('horaFin')) {
+          @if (form.controls.horaFin.hasError('required')) {
+            <p class="error">Indica la hora de fin.</p>
+          }
+          @if (form.controls.horaFin.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        }
+        @if (mostrarErrorGrupo('horaFinNoPosterior', 'horaInicio', 'horaFin')) {
+          <p class="error">La hora de fin debe ser posterior a la de inicio.</p>
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="responsable">Responsable</label>
+      <input
+        id="responsable"
+        type="text"
+        formControlName="responsable"
+        maxlength="100"
+        autocomplete="name"
+        [attr.aria-invalid]="mostrarError('responsable')"
+        aria-describedby="responsable-error"
+      />
+      <div id="responsable-error" aria-live="polite">
+        @if (mostrarError('responsable')) {
+          @if (form.controls.responsable.hasError('required')) {
+            <p class="error">Indica el responsable.</p>
+          }
+          @if (form.controls.responsable.hasError('maxlength')) {
+            <p class="error">Máximo 100 caracteres.</p>
+          }
+          @if (form.controls.responsable.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="motivo">Motivo</label>
+      <textarea
+        id="motivo"
+        formControlName="motivo"
+        maxlength="255"
+        rows="3"
+        [attr.aria-invalid]="mostrarError('motivo')"
+        aria-describedby="motivo-error"
+      ></textarea>
+      <div id="motivo-error" aria-live="polite">
+        @if (mostrarError('motivo')) {
+          @if (form.controls.motivo.hasError('required')) {
+            <p class="error">Indica el motivo.</p>
+          }
+          @if (form.controls.motivo.hasError('maxlength')) {
+            <p class="error">Máximo 255 caracteres.</p>
+          }
+          @if (form.controls.motivo.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="acciones">
+      <button type="submit" class="boton" [disabled]="enviando()">
+        {{ enviando() ? 'Guardando…' : 'Guardar reserva' }}
+      </button>
+      <a routerLink="/reservas" class="boton-secundario">Cancelar</a>
+    </div>
+  </form>
+</section>
