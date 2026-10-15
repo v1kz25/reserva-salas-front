@@ -4,14 +4,14 @@ Aplicación web de reserva de salas. Consume la API de [`reserva-salas-back`](ht
 
 ## Stack
 
-- Angular 19 (componentes standalone, signals)
+- Angular 21 (componentes standalone, signals)
 - SCSS
 - ESLint (angular-eslint)
 - Karma + Jasmine con Chrome Headless
 
 ## Requisitos
 
-- Node 22 (ver `.nvmrc`; con nvm: `nvm use`). Angular 19 no es compatible con Node 24.
+- Node 22 (ver `.nvmrc`; con nvm: `nvm use`). Angular 21 es compatible con Node 20.19+, 22.12+ y 24.
 - Chrome o Chromium para los tests. Si solo tienes Chromium, exporta `CHROME_BIN` con su ruta (por ejemplo, `export CHROME_BIN=/snap/bin/chromium`).
 
 ## Arranque
