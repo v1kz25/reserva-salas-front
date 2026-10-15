@@ -1,1 +1,230 @@
-/* You can add global styles to this file, and also import other style files */
+/* Estilos globales mínimos de la aplicación. */
+:root {
+  --color-primario: #1f5fbf;
+  --color-error: #b3261e;
+  --color-aviso: #8a5a00;
+  --color-borde: #c9ccd1;
+  --radio-boton: 0.5rem;
+  --alto-control: 2.5rem;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1c1c1e;
+}
+
+body {
+  margin: 0;
+}
+
+.barra {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primario);
+
+  .marca {
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+}
+
+.contenido {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .campo {
+    margin-bottom: 0;
+  }
+
+  input,
+  select,
+  button {
+    box-sizing: border-box;
+    height: var(--alto-control);
+  }
+
+  .filtros-error {
+    flex-basis: 100%;
+  }
+
+  .filtros-error:empty {
+    display: none;
+  }
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+
+  input,
+  select,
+  textarea {
+    padding: 0.4rem;
+    font: inherit;
+    border: 1px solid var(--color-borde);
+    border-radius: 4px;
+  }
+
+  [aria-invalid='true'] {
+    border-color: var(--color-error);
+  }
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.aviso {
+  color: var(--color-aviso);
+}
+
+.error-general {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: 4px;
+
+  p {
+    margin: 0.25rem 0;
+  }
+}
+
+.acciones {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+button,
+.boton,
+.boton-secundario,
+.boton-peligro {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  text-decoration: none;
+  border-radius: var(--radio-boton);
+  cursor: pointer;
+}
+
+.boton {
+  color: #fff;
+  background: var(--color-primario);
+  border: 1px solid var(--color-primario);
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.boton-secundario {
+  color: var(--color-primario);
+  background: #fff;
+  border: 1px solid var(--color-primario);
+}
+
+.boton-peligro {
+  color: #fff;
+  background: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boton-tabla {
+  padding: 0.25rem 0.75rem;
+}
+
+.dialogo {
+  max-width: 32rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-boton);
+
+  h2 {
+    margin-top: 0;
+  }
+
+  .acciones {
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  &::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+}
+
+.exito {
+  color: #1b6b2f;
+}
+
+.ficha {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.5rem;
+  margin: 1rem 0 1.5rem;
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+/* En pantallas estrechas solo se desplaza la tabla, no la página. */
+.tabla-desplazable {
+  /* Contiene los elementos `.visualmente-oculto` (absolutos) de la tabla: sin esto escapan del scroll y desbordan la página. */
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primario);
+    outline-offset: 2px;
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-borde);
+  }
+}
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

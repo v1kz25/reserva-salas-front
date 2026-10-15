@@ -1,0 +1,9 @@
+<section class="pagina-error" [attr.aria-labelledby]="idTitulo">
+  <h1 #tituloRef [id]="idTitulo" tabindex="-1">{{ titulo() }}</h1>
+  <div class="pagina-error-cuerpo">
+    <ng-content />
+  </div>
+  <div class="acciones">
+    <ng-content select="[acciones]" />
+  </div>
+</section>

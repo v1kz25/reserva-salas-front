@@ -1,0 +1,33 @@
+<dialog
+  #dialogo
+  class="dialogo"
+  [attr.aria-labelledby]="idTitulo"
+  [attr.aria-describedby]="idDescripcion"
+  (cancel)="alPulsarEsc($event)"
+  (close)="alCerrar()"
+>
+  <h2 [id]="idTitulo">{{ titulo() }}</h2>
+  <div [id]="idDescripcion">
+    <ng-content />
+  </div>
+  <div class="acciones">
+    <button
+      #botonVolver
+      type="button"
+      class="boton-secundario"
+      [attr.aria-disabled]="procesando()"
+      (click)="volver()"
+    >
+      {{ textoVolver() }}
+    </button>
+    <button
+      type="button"
+      class="boton-peligro"
+      [attr.aria-disabled]="procesando()"
+      [attr.aria-busy]="procesando()"
+      (click)="confirmar()"
+    >
+      {{ procesando() ? textoProcesando() : textoConfirmar() }}
+    </button>
+  </div>
+</dialog>
