@@ -25,6 +25,12 @@ export const routes: Routes = [
       import('./features/reservas/reserva-form/reserva-form.component').then((m) => m.ReservaFormComponent),
   },
   {
+    path: 'reservas/:id',
+    title: 'Reserva',
+    loadComponent: () =>
+      import('./features/reservas/reserva-detalle/reserva-detalle.component').then((m) => m.ReservaDetalleComponent),
+  },
+  {
     path: 'error/no-disponible',
     pathMatch: 'full',
     title: 'Servicio no disponible',

@@ -1,6 +1,6 @@
 <section aria-labelledby="titulo-reservas">
   <header class="cabecera">
-    <h1 id="titulo-reservas">Reservas</h1>
+    <h1 id="titulo-reservas" #tituloRef tabindex="-1">Reservas</h1>
     <a routerLink="/reservas/nueva" class="boton">Nueva reserva</a>
   </header>
 
@@ -51,39 +51,90 @@
     <p class="aviso" role="alert">No se han podido cargar las salas: {{ errorSalas() }}</p>
   }
 
+  <div role="status">
+    @if (avisoCancelacion()) {
+      <p class="exito">{{ avisoCancelacion() }}</p>
+    }
+  </div>
+
+  @if (errorCancelacion()) {
+    <p class="error-general" role="alert">{{ errorCancelacion() }}</p>
+  }
+
   @if (cargando()) {
     <p aria-live="polite">Cargando reservas…</p>
   } @else if (error()) {
     <p class="error" role="alert">{{ error() }}</p>
   } @else {
-    <table>
-      <caption class="visualmente-oculto">Listado de reservas</caption>
-      <thead>
-        <tr>
-          <th scope="col">Sala</th>
-          <th scope="col">Fecha</th>
-          <th scope="col">Inicio</th>
-          <th scope="col">Fin</th>
-          <th scope="col">Responsable</th>
-          <th scope="col">Motivo</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (reserva of reservas(); track reserva.id) {
+    <div class="tabla-desplazable" role="region" aria-labelledby="caption-reservas" tabindex="0">
+      <table>
+        <caption id="caption-reservas" class="visualmente-oculto">Listado de reservas</caption>
+        <thead>
           <tr>
-            <td>{{ nombreSala(reserva.salaId) }}</td>
-            <td>{{ reserva.fecha | date: 'dd/MM/yyyy' }}</td>
-            <td>{{ reserva.horaInicio | hora }}</td>
-            <td>{{ reserva.horaFin | hora }}</td>
-            <td>{{ reserva.responsable }}</td>
-            <td>{{ reserva.motivo }}</td>
+            <th scope="col">Sala</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Inicio</th>
+            <th scope="col">Fin</th>
+            <th scope="col">Responsable</th>
+            <th scope="col">Motivo</th>
+            <th scope="col"><span class="visualmente-oculto">Acciones</span></th>
           </tr>
-        } @empty {
-          <tr>
-            <td colspan="6">No hay reservas que cumplan los filtros.</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          @for (reserva of reservas(); track reserva.id) {
+            <tr>
+              <td>{{ nombreSala(reserva.salaId) }}</td>
+              <td>{{ reserva.fecha | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ reserva.horaInicio | hora }}</td>
+              <td>{{ reserva.horaFin | hora }}</td>
+              <td>{{ reserva.responsable }}</td>
+              <td>{{ reserva.motivo }}</td>
+              <td>
+                <div class="acciones">
+                  <a
+                    [routerLink]="['/reservas', reserva.id]"
+                    attr.aria-label="Ver la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
+                  >
+                    Ver
+                  </a>
+                  <button
+                    type="button"
+                    class="boton-secundario boton-tabla"
+                    attr.aria-label="Cancelar la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
+                    (click)="pedirCancelacion(reserva)"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7">No hay reservas que cumplan los filtros.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   }
+
+  <app-dialogo-confirmacion
+    titulo="Cancelar reserva"
+    textoConfirmar="Sí, cancelar la reserva"
+    textoProcesando="Cancelando…"
+    textoVolver="No, mantenerla"
+    [abierto]="reservaACancelar() !== undefined"
+    [procesando]="cancelando()"
+    (confirmado)="confirmarCancelacion()"
+    (cancelado)="cerrarDialogo()"
+  >
+    @if (reservaACancelar(); as pendiente) {
+      <p>
+        ¿Seguro que quieres cancelar la reserva de <strong>{{ nombreSala(pendiente.salaId) }}</strong> del
+        {{ pendiente.fecha | date: 'dd/MM/yyyy' }}, de {{ pendiente.horaInicio | hora }} a
+        {{ pendiente.horaFin | hora }} ({{ pendiente.motivo }})?
+      </p>
+      <p>La reserva se eliminará y la franja quedará libre.</p>
+    }
+  </app-dialogo-confirmacion>
 </section>

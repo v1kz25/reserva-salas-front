@@ -40,4 +40,22 @@ export class ReservasService {
   crear(reserva: ReservaRequest): Observable<Reserva> {
     return this.http.post<Reserva>(this.url, reserva);
   }
+
+  /**
+   * Obtiene una reserva por su id (`GET /api/reservas/{id}`).
+   *
+   * @param id Identificador de la reserva.
+   */
+  obtener(id: number): Observable<Reserva> {
+    return this.http.get<Reserva>(`${this.url}/${id}`);
+  }
+
+  /**
+   * Cancela (elimina) una reserva y deja libre su franja (`DELETE /api/reservas/{id}`).
+   *
+   * @param id Identificador de la reserva.
+   */
+  cancelar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${id}`);
+  }
 }
