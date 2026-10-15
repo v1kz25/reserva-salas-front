@@ -31,6 +31,23 @@ body {
     text-decoration: none;
   }
 
+  .navegacion {
+    display: flex;
+    gap: 1rem;
+    margin-right: auto;
+
+    a {
+      color: #fff;
+      text-decoration: none;
+
+      &:hover,
+      &.activo {
+        text-decoration: underline;
+        text-underline-offset: 0.25em;
+      }
+    }
+  }
+
   .sesion {
     display: flex;
     gap: 1rem;
@@ -126,6 +143,12 @@ body {
 
   [aria-invalid='true'] {
     border-color: var(--color-error);
+  }
+
+  .ayuda {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #4a4d52;
   }
 }
 

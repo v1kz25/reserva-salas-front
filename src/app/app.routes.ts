@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 
+import { adminGuard } from './core/guards/admin.guard';
 import { loginGuard, sesionGuard } from './core/guards/sesion.guard';
 import { InesperadoComponent } from './features/errores/inesperado/inesperado.component';
 import { NoDisponibleComponent } from './features/errores/no-disponible/no-disponible.component';
@@ -12,7 +13,8 @@ import { SinPermisoComponent } from './features/errores/sin-permiso/sin-permiso.
  * mostrarse aunque no haya red para descargar un chunk.
  *
  * Todas las pantallas exigen sesión (`sesionGuard`), salvo `/login`, las páginas de
- * error y la de «no encontrado».
+ * error y la de «no encontrado». Las de `/admin/**` exigen además el rol `ADMIN`
+ * (`adminGuard`, siempre detrás de `sesionGuard`).
  */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'reservas' },
@@ -42,6 +44,24 @@ export const routes: Routes = [
     canActivate: [sesionGuard],
     loadComponent: () =>
       import('./features/reservas/reserva-detalle/reserva-detalle.component').then((m) => m.ReservaDetalleComponent),
+  },
+  {
+    path: 'admin/salas',
+    title: 'Salas',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () => import('./features/salas/sala-list/sala-list.component').then((m) => m.SalaListComponent),
+  },
+  {
+    path: 'admin/salas/nueva',
+    title: 'Nueva sala',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () => import('./features/salas/sala-form/sala-form.component').then((m) => m.SalaFormComponent),
+  },
+  {
+    path: 'admin/salas/:id',
+    title: 'Editar sala',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () => import('./features/salas/sala-form/sala-form.component').then((m) => m.SalaFormComponent),
   },
   {
     path: 'error/no-disponible',

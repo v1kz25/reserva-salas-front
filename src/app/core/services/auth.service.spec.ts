@@ -55,6 +55,38 @@ describe('AuthService', () => {
       return r;
     }
 
+    it('dos llamadas simultáneas comparten una sola petición /me y reciben el mismo estado', () => {
+      const a = restaurar();
+      const b = restaurar();
+      http.expectOne('/api/auth/me').flush(ANA);
+      expect(a.estado).toBe('autenticado');
+      expect(b.estado).toBe('autenticado');
+    });
+
+    it('dos llamadas simultáneas con 401 comparten /me y solo piden un csrf', () => {
+      const a = restaurar();
+      const b = restaurar();
+      http.expectOne('/api/auth/me').flush(null, { status: 401, statusText: 'Unauthorized' });
+      http.expectOne('/api/auth/csrf').flush(null, { status: 204, statusText: 'No Content' });
+      expect(a.estado).toBe('anonimo');
+      expect(b.estado).toBe('anonimo');
+    });
+
+    it('terminada la comprobación, una llamada posterior lanza otra petición /me', () => {
+      restaurar();
+      http.expectOne('/api/auth/me').flush(ANA);
+      restaurar();
+      http.expectOne('/api/auth/me').flush(ANA);
+    });
+
+    it('tras un fallo de red la siguiente llamada vuelve a preguntar al servidor', () => {
+      const a = restaurar();
+      http.expectOne('/api/auth/me').error(new ProgressEvent('error'));
+      expect(a.estado).toBe('desconocido');
+      restaurar();
+      http.expectOne('/api/auth/me').flush(ANA);
+    });
+
     it('GET /api/auth/me con 200 inicia la sesión y no pide csrf', () => {
       const r = restaurar();
       const req = http.expectOne('/api/auth/me');

@@ -1,0 +1,130 @@
+<section aria-labelledby="titulo-sala-form">
+  <h1 id="titulo-sala-form" #tituloRef tabindex="-1">{{ titulo() }}</h1>
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando sala…</p>
+  } @else if (noEncontrada()) {
+    <div class="error-general" role="alert">
+      <p><strong>La sala no existe.</strong></p>
+      <p>Puede que se haya eliminado desde otra pestaña o por otra persona.</p>
+    </div>
+    <a [routerLink]="rutaSalas" class="boton-secundario">Volver al listado</a>
+  } @else if (errorCarga()) {
+    <p class="error" role="alert">{{ errorCarga() }}</p>
+    <a [routerLink]="rutaSalas" class="boton-secundario">Volver al listado</a>
+  } @else {
+    @if (errorGeneral(); as problema) {
+      <div #errorRef class="error-general" role="alert" tabindex="-1">
+        @if (problema.status === 400) {
+          <p><strong>Revisa los datos de la sala.</strong></p>
+        } @else {
+          <p><strong>{{ problema.title }}</strong></p>
+        }
+        @if (problema.detail) {
+          <p>{{ problema.detail }}</p>
+        }
+        @if (erroresSinCampo().length > 0) {
+          <ul>
+            @for (error of erroresSinCampo(); track error.campo) {
+              <li>{{ error.campo }}: {{ error.mensaje }}</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    <form #formRef [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+      <div class="campo">
+        <label for="nombre">Nombre</label>
+        <input
+          id="nombre"
+          type="text"
+          formControlName="nombre"
+          autocomplete="off"
+          [maxlength]="maxNombre"
+          [attr.aria-invalid]="mostrarError('nombre')"
+          aria-describedby="nombre-error"
+        />
+        <div id="nombre-error" aria-live="polite">
+          @if (mostrarError('nombre')) {
+            @if (form.controls.nombre.hasError('required') || form.controls.nombre.hasError('textoEnBlanco')) {
+              <p class="error">Indica el nombre.</p>
+            }
+            @if (form.controls.nombre.hasError('maxlength')) {
+              <p class="error">Máximo {{ maxNombre }} caracteres.</p>
+            }
+            @if (form.controls.nombre.getError('nombreRepetido'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            }
+            @if (form.controls.nombre.getError('servidor'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="capacidad">Capacidad (personas)</label>
+        <input
+          id="capacidad"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          step="1"
+          formControlName="capacidad"
+          [attr.aria-invalid]="mostrarError('capacidad')"
+          aria-describedby="capacidad-error"
+        />
+        <div id="capacidad-error" aria-live="polite">
+          @if (mostrarError('capacidad')) {
+            @if (form.controls.capacidad.hasError('required')) {
+              <p class="error">Indica la capacidad.</p>
+            }
+            @if (form.controls.capacidad.hasError('noEntero')) {
+              <p class="error">La capacidad debe ser un número entero.</p>
+            }
+            @if (form.controls.capacidad.hasError('min')) {
+              <p class="error">La capacidad debe ser de al menos 1 persona.</p>
+            }
+            @if (form.controls.capacidad.getError('servidor'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="planta">Planta</label>
+        <input
+          id="planta"
+          type="number"
+          step="1"
+          formControlName="planta"
+          [attr.aria-invalid]="mostrarError('planta')"
+          aria-describedby="planta-ayuda planta-error"
+        />
+        <p id="planta-ayuda" class="ayuda">Usa números negativos para los sótanos (por ejemplo, -1).</p>
+        <div id="planta-error" aria-live="polite">
+          @if (mostrarError('planta')) {
+            @if (form.controls.planta.hasError('required')) {
+              <p class="error">Indica la planta.</p>
+            }
+            @if (form.controls.planta.hasError('noEntero')) {
+              <p class="error">La planta debe ser un número entero.</p>
+            }
+            @if (form.controls.planta.getError('servidor'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton" [disabled]="enviando()">
+          {{ enviando() ? 'Guardando…' : 'Guardar sala' }}
+        </button>
+        <a [routerLink]="rutaSalas" class="boton-secundario">Cancelar</a>
+      </div>
+    </form>
+  }
+</section>
