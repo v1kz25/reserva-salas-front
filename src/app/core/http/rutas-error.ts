@@ -13,6 +13,9 @@ export const RUTA_ERROR: Readonly<Record<ErrorGrave, string>> = {
   'sin-permiso': '/error/sin-permiso',
 };
 
+/** Ruta de la pantalla de inicio de sesión. */
+export const RUTA_LOGIN = '/login';
+
 /** Ruta de la página de «no encontrado». */
 export const RUTA_NO_ENCONTRADO = '/no-encontrado';
 
@@ -27,8 +30,17 @@ export function esRutaDeError(url: string): boolean {
 }
 
 /**
+ * Indica si una URL interna corresponde a la pantalla de inicio de sesión.
+ *
+ * @param url URL interna, por ejemplo `/login?returnUrl=%2Freservas`.
+ */
+export function esRutaLogin(url: string): boolean {
+  return url.split(/[?#]/, 1)[0] === RUTA_LOGIN;
+}
+
+/**
  * Valida una URL de origen: solo se aceptan rutas internas de la aplicación
- * (empiezan por una única `/`, sin esquema ni host) que no sean páginas de error.
+ * (empiezan por una única `/`, sin esquema ni host) que no sean páginas de error ni el login.
  *
  * @param valor Valor recibido (por ejemplo, del query param `returnUrl`).
  * @returns La ruta si es válida o `undefined` si no lo es.
@@ -40,7 +52,7 @@ export function rutaInternaSegura(valor: string | null | undefined): string | un
   if (valor.startsWith('//') || valor.includes('\\') || tieneCaracteresDeControl(valor)) {
     return undefined;
   }
-  if (esRutaDeError(valor)) {
+  if (esRutaDeError(valor) || esRutaLogin(valor)) {
     return undefined;
   }
   return valor;

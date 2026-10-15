@@ -1,5 +1,19 @@
 <header class="barra">
   <a routerLink="/reservas" class="marca">{{ title }}</a>
+
+  @if (sesion.usuario(); as usuario) {
+    <div class="sesion">
+      <p class="usuario">
+        <span class="visualmente-oculto">Sesión iniciada como </span>{{ usuario.nombre }}
+        @if (sesion.esAdmin()) {
+          <span class="rol">(administrador)</span>
+        }
+      </p>
+      <button type="button" class="boton-barra" [disabled]="saliendo()" (click)="salir()">
+        {{ saliendo() ? 'Saliendo…' : 'Salir' }}
+      </button>
+    </div>
+  }
 </header>
 
 <main class="contenido">

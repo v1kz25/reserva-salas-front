@@ -16,11 +16,11 @@ import { aPartirDeMananaValidator, horaFinPosteriorValidator } from './reserva-f
 /** Campos del formulario que pueden recibir errores del servidor. */
 type CampoReserva = keyof ReservaRequest;
 
-const CAMPOS: readonly CampoReserva[] = ['salaId', 'fecha', 'horaInicio', 'horaFin', 'responsable', 'motivo'];
+const CAMPOS: readonly CampoReserva[] = ['salaId', 'fecha', 'horaInicio', 'horaFin', 'motivo'];
 
 /**
  * ReservaFormComponent — formulario de alta de una reserva con validación en cliente
- * y presentación de los errores del backend.
+ * y presentación de los errores del backend. El responsable es el usuario de la sesión.
  */
 @Component({
   selector: 'app-reserva-form',
@@ -62,7 +62,6 @@ export class ReservaFormComponent {
       fecha: this.fb.control('', [Validators.required, aPartirDeMananaValidator(this.ahora)]),
       horaInicio: this.fb.control('', Validators.required),
       horaFin: this.fb.control('', Validators.required),
-      responsable: this.fb.control('', [Validators.required, Validators.maxLength(100)]),
       motivo: this.fb.control('', [Validators.required, Validators.maxLength(255)]),
     },
     { validators: [horaFinPosteriorValidator] },
@@ -139,7 +138,6 @@ export class ReservaFormComponent {
       fecha: valor.fecha,
       horaInicio: valor.horaInicio.slice(0, 5),
       horaFin: valor.horaFin.slice(0, 5),
-      responsable: valor.responsable.trim(),
       motivo: valor.motivo.trim(),
     };
   }

@@ -7,6 +7,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 
 import { routes } from '../../app.routes';
 import { UltimoErrorService } from '../../core/http/ultimo-error.service';
+import { SesionService } from '../../core/services/sesion.service';
 
 describe('páginas de error', () => {
   let harness: RouterTestingHarness;
@@ -17,6 +18,7 @@ describe('páginas de error', () => {
     TestBed.configureTestingModule({
       providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
     });
+    TestBed.inject(SesionService).establecer({ id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' });
     harness = await RouterTestingHarness.create();
     location = TestBed.inject(Location);
   });

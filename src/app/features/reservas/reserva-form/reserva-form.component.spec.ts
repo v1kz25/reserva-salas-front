@@ -66,7 +66,6 @@ describe('ReservaFormComponent', () => {
     escribir('fecha', over['fecha'] ?? MANANA);
     escribir('hora-inicio', over['inicio'] ?? '10:00');
     escribir('hora-fin', over['fin'] ?? '11:00');
-    escribir('responsable', over['responsable'] ?? '  Ana  ');
     escribir('motivo', over['motivo'] ?? ' Reunión ');
     fixture.detectChanges();
   }
@@ -90,7 +89,6 @@ describe('ReservaFormComponent', () => {
     const t = textoErrores().join('|');
     expect(t).toContain('Selecciona una sala');
     expect(t).toContain('Indica la fecha');
-    expect(t).toContain('Indica el responsable');
     expect(t).toContain('Indica el motivo');
   });
 
@@ -145,12 +143,18 @@ describe('ReservaFormComponent', () => {
     expect(el.textContent).toContain('Solo se puede reservar a partir de mañana');
   });
 
-  it('responsable de más de 100 caracteres no se envía', () => {
-    rellenar({ responsable: 'a'.repeat(101) });
-    // maxlength del input recorta en navegador real, pero el valor programático lo supera
+  it('el formulario no tiene campo de responsable (es el usuario de la sesión)', () => {
+    expect(el.querySelector('#responsable')).toBeNull();
+    expect(el.querySelector('[formcontrolname="responsable"]')).toBeNull();
+    expect(el.textContent?.toLowerCase()).not.toContain('responsable');
+  });
+
+  it('el cuerpo del POST no incluye responsable ni usuarioId', () => {
+    rellenar();
     enviar();
-    http.expectNone('/api/reservas');
-    expect(el.textContent).toContain('Máximo 100 caracteres');
+    const req = http.expectOne('/api/reservas');
+    expect(Object.keys(req.request.body).sort()).toEqual(['fecha', 'horaFin', 'horaInicio', 'motivo', 'salaId']);
+    req.flush({ id: 1 });
   });
 
   it('envía la petición normalizada y navega a /reservas al guardar', () => {
@@ -163,7 +167,6 @@ describe('ReservaFormComponent', () => {
       fecha: MANANA,
       horaInicio: '10:00',
       horaFin: '11:00',
-      responsable: 'Ana',
       motivo: 'Reunión',
     });
     expect(router.navigate).not.toHaveBeenCalled();

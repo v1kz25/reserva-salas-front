@@ -3,6 +3,7 @@ import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@a
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
+import { SesionService } from '../../../core/services/sesion.service';
 import { ReservaListComponent } from './reserva-list.component';
 
 const SALAS = [
@@ -10,7 +11,7 @@ const SALAS = [
   { id: 2, nombre: 'Sala Sur', capacidad: 4, planta: -1 },
 ];
 const RESERVAS = [
-  { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', responsable: 'Ana', motivo: 'Daily' },
+  { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' },
 ];
 
 describe('ReservaListComponent', () => {
@@ -29,6 +30,7 @@ describe('ReservaListComponent', () => {
       imports: [ReservaListComponent],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
+    TestBed.inject(SesionService).establecer({ id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ReservaListComponent);
     el = fixture.nativeElement as HTMLElement;
@@ -359,7 +361,7 @@ describe('ReservaListComponent', () => {
   });
 
   describe('ver y cancelar', () => {
-    const OTRA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', responsable: 'Luis', motivo: 'Demo' };
+    const OTRA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', usuarioId: 1, responsable: 'Luis', motivo: 'Demo' };
     const filas = () => el.querySelectorAll('tbody tr').length;
     const dialogo = () => el.querySelector('dialog') as HTMLDialogElement;
     const botonFila = (n = 0) =>
@@ -583,6 +585,7 @@ describe('ReservaListComponent con aviso de navegación', () => {
       imports: [ReservaListComponent],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
+    TestBed.inject(SesionService).establecer({ id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' });
     http = TestBed.inject(HttpTestingController);
     spyOn(TestBed.inject(Router), 'getCurrentNavigation').and.returnValue({
       extras: { state: { aviso: 'Aviso de prueba' } },

@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
+import { SesionService } from './core/services/sesion.service';
 
 describe('rutas', () => {
   let router: Router;
@@ -14,6 +15,7 @@ describe('rutas', () => {
     TestBed.configureTestingModule({
       providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
     });
+    TestBed.inject(SesionService).establecer({ id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' });
     router = TestBed.inject(Router);
     location = TestBed.inject(Location);
   });

@@ -19,14 +19,15 @@ import { Reserva } from '../../../core/models/reserva.model';
 import { Sala } from '../../../core/models/sala.model';
 import { ReservasService } from '../../../core/services/reservas.service';
 import { SalasService } from '../../../core/services/salas.service';
+import { SesionService } from '../../../core/services/sesion.service';
 import { DialogoConfirmacionComponent } from '../../../shared/components/dialogo-confirmacion/dialogo-confirmacion.component';
 import { HoraPipe } from '../../../shared/pipes/hora.pipe';
 import { focoPerdido } from '../../../shared/utils/foco';
-import { AVISO_RESERVA_CANCELADA, CLAVE_AVISO } from '../reserva-cancelacion';
+import { AVISO_RESERVA_CANCELADA, CLAVE_AVISO, MENSAJE_CANCELACION_SIN_PERMISO } from '../reserva-cancelacion';
 
 /**
  * ReservaDetalleComponent — muestra los datos de una reserva y permite cancelarla
- * tras confirmarlo en un diálogo.
+ * tras confirmarlo en un diálogo, si es del usuario o si es administrador.
  */
 @Component({
   selector: 'app-reserva-detalle',
@@ -63,6 +64,9 @@ export class ReservaDetalleComponent {
   /** Mensaje de error al cancelar la reserva, si lo hay. */
   protected readonly errorCancelacion = signal<string | undefined>(undefined);
 
+  /** Sesión actual, para decidir si el usuario puede cancelar la reserva. */
+  protected readonly sesion = inject(SesionService);
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -97,8 +101,8 @@ export class ReservaDetalleComponent {
 
   /**
    * Envía la cancelación. Si va bien, vuelve al listado con un aviso; si la reserva ya no
-   * existía (`404`), lo indica. Mientras hay una cancelación en curso se ignoran nuevas
-   * confirmaciones.
+   * existía (`404`) o el servidor no lo permite (`403`), lo indica. Mientras hay una
+   * cancelación en curso se ignoran nuevas confirmaciones.
    */
   confirmarCancelacion(): void {
     const reserva = this.reserva();
@@ -118,6 +122,8 @@ export class ReservaDetalleComponent {
           if (problema.status === 404) {
             this.marcarNoEncontrada();
             this.recuperarFoco();
+          } else if (problema.status === 403) {
+            this.errorCancelacion.set(MENSAJE_CANCELACION_SIN_PERMISO);
           } else {
             this.errorCancelacion.set(problema.detail ?? problema.title);
           }

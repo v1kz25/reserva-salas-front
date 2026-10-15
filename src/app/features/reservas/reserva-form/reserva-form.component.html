@@ -131,32 +131,6 @@
     </div>
 
     <div class="campo">
-      <label for="responsable">Responsable</label>
-      <input
-        id="responsable"
-        type="text"
-        formControlName="responsable"
-        maxlength="100"
-        autocomplete="name"
-        [attr.aria-invalid]="mostrarError('responsable')"
-        aria-describedby="responsable-error"
-      />
-      <div id="responsable-error" aria-live="polite">
-        @if (mostrarError('responsable')) {
-          @if (form.controls.responsable.hasError('required')) {
-            <p class="error">Indica el responsable.</p>
-          }
-          @if (form.controls.responsable.hasError('maxlength')) {
-            <p class="error">Máximo 100 caracteres.</p>
-          }
-          @if (form.controls.responsable.getError('servidor'); as mensaje) {
-            <p class="error">{{ mensaje }}</p>
-          }
-        }
-      </div>
-    </div>
-
-    <div class="campo">
       <label for="motivo">Motivo</label>
       <textarea
         id="motivo"
