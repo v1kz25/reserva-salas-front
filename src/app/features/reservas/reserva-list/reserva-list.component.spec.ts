@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 
 import { ReservaListComponent } from './reserva-list.component';
 
@@ -356,5 +356,248 @@ describe('ReservaListComponent', () => {
       expect(hasta.min).toBe('');
       http.match((r) => r.url === '/api/reservas');
     });
+  });
+
+  describe('ver y cancelar', () => {
+    const OTRA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', responsable: 'Luis', motivo: 'Demo' };
+    const filas = () => el.querySelectorAll('tbody tr').length;
+    const dialogo = () => el.querySelector('dialog') as HTMLDialogElement;
+    const botonFila = (n = 0) =>
+      el.querySelectorAll('tbody tr')[n].querySelector('button') as HTMLButtonElement;
+    const botonDialogo = (texto: string) =>
+      Array.from(el.querySelectorAll('dialog button')).find((b) => b.textContent?.includes(texto)) as HTMLButtonElement;
+    const deletes = () => http.match((r) => r.method === 'DELETE');
+
+    beforeEach(() => document.body.appendChild(el));
+    afterEach(() => el.remove());
+
+    async function abrir(n = 0): Promise<void> {
+      botonFila(n).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    }
+
+    it('cada reserva tiene un botón «Cancelar» y un enlace «Ver» a su detalle', () => {
+      cargar([...RESERVAS, OTRA]);
+      expect(el.querySelectorAll('tbody tr button').length).toBe(2);
+      expect(el.querySelectorAll('tbody tr button')[0].textContent?.trim()).toBe('Cancelar');
+      const enlaces = Array.from(el.querySelectorAll('tbody tr a')).map((a) => a.getAttribute('href'));
+      expect(enlaces).toEqual(['/reservas/10', '/reservas/11']);
+    });
+
+    it('«Cancelar» abre el diálogo de confirmación sin enviar DELETE', async () => {
+      cargar();
+      await abrir();
+      expect(dialogo().open).toBeTrue();
+      expect(dialogo().textContent).toContain('Sala Sur');
+      expect(deletes().length).toBe(0);
+    });
+
+    it('confirmar envía DELETE /api/reservas/{id}, quita la fila y recarga respetando los filtros', async () => {
+      cargar([...RESERVAS, OTRA]);
+      elegirOpcion(el.querySelector('#filtro-sala') as HTMLSelectElement, 'Sala Sur');
+      ultimaReservas().flush([...RESERVAS, OTRA]);
+      fixture.detectChanges();
+      await abrir(0);
+      botonDialogo('Sí, cancelar').click();
+      const req = http.expectOne((r) => r.method === 'DELETE');
+      expect(req.request.url).toBe('/api/reservas/10');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      fixture.detectChanges();
+      expect(filas()).toBe(1);
+      expect(el.textContent).not.toContain('Ana');
+      expect(el.querySelector('.exito')?.textContent).toContain('Reserva cancelada');
+      const recarga = ultimaReservas();
+      expect(recarga.request.method).toBe('GET');
+      expect(recarga.request.params.get('salaId')).toBe('2');
+      expect(el.textContent).not.toContain('Cargando reservas');
+      recarga.flush([OTRA]);
+      fixture.detectChanges();
+      expect(filas()).toBe(1);
+      expect(el.textContent).toContain('Luis');
+      expect(dialogo().open).toBeFalse();
+    });
+
+    it('tras cancelar, la recarga refleja la franja liberada (sin la reserva)', async () => {
+      cargar();
+      await abrir();
+      botonDialogo('Sí, cancelar').click();
+      http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+      ultimaReservas().flush([]);
+      fixture.detectChanges();
+      expect(el.textContent).toContain('No hay reservas');
+    });
+
+    it('«No, mantenerla» cierra el diálogo sin DELETE ni cambios en la tabla', async () => {
+      cargar();
+      await abrir();
+      botonDialogo('No, mantenerla').click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(dialogo().open).toBeFalse();
+      expect(deletes().length).toBe(0);
+      expect(reservasReqs().length).toBe(0);
+      expect(filas()).toBe(1);
+      expect(el.querySelector('.exito')).toBeNull();
+    });
+
+    it('Esc (cancel) anula la cancelación', async () => {
+      cargar();
+      await abrir();
+      dialogo().dispatchEvent(new Event('cancel', { cancelable: true }));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(dialogo().open).toBeFalse();
+      expect(deletes().length).toBe(0);
+    });
+
+    it('doble clic en confirmar envía un solo DELETE', async () => {
+      cargar();
+      await abrir();
+      const confirmar = botonDialogo('Sí, cancelar');
+      confirmar.click();
+      fixture.detectChanges();
+      confirmar.click();
+      botonDialogo('Cancelando').click();
+      const reqs = http.match((r) => r.method === 'DELETE');
+      expect(reqs.length).toBe(1);
+      reqs[0].flush(null, { status: 204, statusText: 'No Content' });
+      ultimaReservas().flush([]);
+    });
+
+    it('mientras se cancela no se puede cambiar la reserva seleccionada', async () => {
+      cargar([...RESERVAS, OTRA]);
+      await abrir(0);
+      botonDialogo('Sí, cancelar').click();
+      fixture.detectChanges();
+      const comp = fixture.componentInstance as unknown as {
+        cancelando: () => boolean;
+        reservaACancelar: () => { id: number } | undefined;
+        pedirCancelacion(r: unknown): void;
+      };
+      expect(comp.cancelando()).toBeTrue();
+      comp.pedirCancelacion(OTRA);
+      expect(comp.reservaACancelar()?.id).toBe(10);
+      const reqs = deletes();
+      expect(reqs.length).toBe(1);
+      reqs[0].flush(null, { status: 204, statusText: 'No Content' });
+      ultimaReservas().flush([OTRA]);
+    });
+
+    it('404: mensaje claro, quita la fila y refresca el listado', async () => {
+      cargar([...RESERVAS, OTRA]);
+      await abrir(0);
+      botonDialogo('Sí, cancelar').click();
+      http.expectOne((r) => r.method === 'DELETE').flush({ title: 'x', status: 404 }, { status: 404, statusText: 'Not Found' });
+      fixture.detectChanges();
+      expect(el.querySelector('.error-general')?.textContent).toContain('La reserva ya no existe');
+      expect(el.querySelector('.exito')).toBeNull();
+      expect(filas()).toBe(1);
+      ultimaReservas().flush([OTRA]);
+      fixture.detectChanges();
+      expect(dialogo().open).toBeFalse();
+    });
+
+    it('otro error (409): muestra el detalle, mantiene la fila y no recarga', async () => {
+      cargar();
+      await abrir();
+      botonDialogo('Sí, cancelar').click();
+      http
+        .expectOne((r) => r.method === 'DELETE')
+        .flush({ title: 'Conflicto', status: 409, detail: 'Fallo interno' }, { status: 409, statusText: 'Conflict' });
+      fixture.detectChanges();
+      expect(el.querySelector('.error-general')?.textContent).toContain('Fallo interno');
+      expect(filas()).toBe(1);
+      expect(reservasReqs().length).toBe(0);
+      expect(dialogo().open).toBeFalse();
+    });
+
+    it('error de red (status 0): muestra un mensaje y se puede reintentar', async () => {
+      cargar();
+      await abrir();
+      botonDialogo('Sí, cancelar').click();
+      http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 0, statusText: '' });
+      fixture.detectChanges();
+      expect(el.querySelector('.error-general')?.textContent).toContain('No se ha podido conectar');
+      await abrir();
+      botonDialogo('Sí, cancelar').click();
+      const req = http.expectOne((r) => r.method === 'DELETE');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      ultimaReservas().flush([]);
+      fixture.detectChanges();
+      expect(el.querySelector('.error-general')).toBeNull();
+    });
+
+    it('abrir un nuevo diálogo limpia el aviso y el error anteriores', async () => {
+      cargar([...RESERVAS, OTRA]);
+      await abrir(0);
+      botonDialogo('Sí, cancelar').click();
+      http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+      ultimaReservas().flush([OTRA]);
+      fixture.detectChanges();
+      expect(el.querySelector('.exito')).not.toBeNull();
+      await abrir(0);
+      expect(el.querySelector('.exito')).toBeNull();
+    });
+
+    it('tras cancelar con éxito, cuando desaparece la fila, el foco va al h1', async () => {
+      cargar();
+      await abrir();
+      botonDialogo('Sí, cancelar').click();
+      http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      ultimaReservas().flush([]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r)));
+      expect(document.activeElement).toBe(el.querySelector('h1#titulo-reservas'));
+    });
+  });
+
+  it('la tabla va en una región desplazable con nombre accesible que apunta a un caption real', () => {
+    cargar();
+    const region = el.querySelector('div.tabla-desplazable') as HTMLElement;
+    expect(region.getAttribute('role')).toBe('region');
+    expect(region.getAttribute('tabindex')).toBe('0');
+    const id = region.getAttribute('aria-labelledby') as string;
+    expect(id).toBe('caption-reservas');
+    const caption = el.querySelector(`#${id}`) as HTMLElement;
+    expect(caption.tagName).toBe('CAPTION');
+    expect(caption.textContent?.trim()).not.toBe('');
+    expect(region.contains(caption)).toBeTrue();
+  });
+});
+
+describe('ReservaListComponent con aviso de navegación', () => {
+  let http: HttpTestingController;
+  const estadoOriginal: unknown = history.state;
+
+  afterEach(() => {
+    history.replaceState(estadoOriginal, '');
+    http.verify();
+  });
+
+  it('muestra el aviso recibido y lo borra del history.state conservando el resto', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ReservaListComponent],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    http = TestBed.inject(HttpTestingController);
+    spyOn(TestBed.inject(Router), 'getCurrentNavigation').and.returnValue({
+      extras: { state: { aviso: 'Aviso de prueba' } },
+    } as unknown as ReturnType<Router['getCurrentNavigation']>);
+    history.replaceState({ aviso: 'Aviso de prueba', navigationId: 7 }, '');
+
+    const fixture = TestBed.createComponent(ReservaListComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    http.expectOne('/api/salas').flush([]);
+    http.expectOne((r) => r.url === '/api/reservas').flush([]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.exito')?.textContent).toContain('Aviso de prueba');
+    expect(history.state).toEqual({ navigationId: 7 });
   });
 });

@@ -56,4 +56,32 @@ describe('servicios HTTP', () => {
     expect(req.request.body).toEqual(body);
     req.flush({ id: 1, ...body });
   });
+
+  it('ReservasService.obtener hace GET /api/reservas/{id}', () => {
+    TestBed.inject(ReservasService).obtener(7).subscribe();
+    const req = http.expectOne('/api/reservas/7');
+    expect(req.request.method).toBe('GET');
+    req.flush({ id: 7 });
+  });
+
+  it('ReservasService.cancelar hace DELETE /api/reservas/{id} sin cuerpo', () => {
+    let completado = false;
+    TestBed.inject(ReservasService)
+      .cancelar(7)
+      .subscribe({ complete: () => (completado = true) });
+    const req = http.expectOne('/api/reservas/7');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.body).toBeNull();
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    expect(completado).toBeTrue();
+  });
+
+  it('ReservasService.cancelar propaga el error 404', () => {
+    let status = 0;
+    TestBed.inject(ReservasService)
+      .cancelar(9)
+      .subscribe({ error: (e) => (status = e.status) });
+    http.expectOne('/api/reservas/9').flush({ title: 'x', status: 404 }, { status: 404, statusText: 'Not Found' });
+    expect(status).toBe(404);
+  });
 });

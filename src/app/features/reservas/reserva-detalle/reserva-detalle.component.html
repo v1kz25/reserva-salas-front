@@ -1,0 +1,60 @@
+<section aria-labelledby="titulo-detalle-reserva">
+  <h1 id="titulo-detalle-reserva" #tituloRef tabindex="-1">Reserva</h1>
+
+  @if (reserva(); as datos) {
+    @if (errorCancelacion()) {
+      <p class="error-general" role="alert">{{ errorCancelacion() }}</p>
+    }
+
+    <dl class="ficha">
+      <dt>Sala</dt>
+      <dd>{{ nombreSala() }}</dd>
+      <dt>Fecha</dt>
+      <dd>{{ datos.fecha | date: 'dd/MM/yyyy' }}</dd>
+      <dt>Inicio</dt>
+      <dd>{{ datos.horaInicio | hora }}</dd>
+      <dt>Fin</dt>
+      <dd>{{ datos.horaFin | hora }}</dd>
+      <dt>Responsable</dt>
+      <dd>{{ datos.responsable }}</dd>
+      <dt>Motivo</dt>
+      <dd>{{ datos.motivo }}</dd>
+    </dl>
+
+    <div class="acciones">
+      <a routerLink="/reservas" class="boton-secundario">Volver al listado</a>
+      <button type="button" class="boton-peligro" (click)="pedirCancelacion()">Cancelar reserva</button>
+    </div>
+  } @else if (cargando()) {
+    <p aria-live="polite">Cargando reserva…</p>
+  } @else if (noEncontrada()) {
+    <div class="error-general" role="alert">
+      <p><strong>La reserva no existe.</strong></p>
+      <p>Puede que se haya cancelado desde otra pestaña o por otra persona.</p>
+    </div>
+    <a routerLink="/reservas" class="boton-secundario">Volver al listado</a>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+    <a routerLink="/reservas" class="boton-secundario">Volver al listado</a>
+  }
+
+  <app-dialogo-confirmacion
+    titulo="Cancelar reserva"
+    textoConfirmar="Sí, cancelar la reserva"
+    textoProcesando="Cancelando…"
+    textoVolver="No, mantenerla"
+    [abierto]="dialogoAbierto()"
+    [procesando]="cancelando()"
+    (confirmado)="confirmarCancelacion()"
+    (cancelado)="cerrarDialogo()"
+  >
+    @if (reserva(); as datos) {
+      <p>
+        ¿Seguro que quieres cancelar la reserva de <strong>{{ nombreSala() }}</strong> del
+        {{ datos.fecha | date: 'dd/MM/yyyy' }}, de {{ datos.horaInicio | hora }} a
+        {{ datos.horaFin | hora }}?
+      </p>
+      <p>La reserva se eliminará y la franja quedará libre.</p>
+    }
+  </app-dialogo-confirmacion>
+</section>

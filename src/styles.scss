@@ -114,7 +114,8 @@ body {
 
 button,
 .boton,
-.boton-secundario {
+.boton-secundario,
+.boton-peligro {
   display: inline-block;
   padding: 0.5rem 1rem;
   font: inherit;
@@ -138,6 +139,73 @@ button,
   color: var(--color-primario);
   background: #fff;
   border: 1px solid var(--color-primario);
+}
+
+.boton-peligro {
+  color: #fff;
+  background: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boton-tabla {
+  padding: 0.25rem 0.75rem;
+}
+
+.dialogo {
+  max-width: 32rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-boton);
+
+  h2 {
+    margin-top: 0;
+  }
+
+  .acciones {
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  &::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+}
+
+.exito {
+  color: #1b6b2f;
+}
+
+.ficha {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.5rem;
+  margin: 1rem 0 1.5rem;
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+/* En pantallas estrechas solo se desplaza la tabla, no la página. */
+.tabla-desplazable {
+  /* Contiene los elementos `.visualmente-oculto` (absolutos) de la tabla: sin esto escapan del scroll y desbordan la página. */
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primario);
+    outline-offset: 2px;
+  }
 }
 
 table {
