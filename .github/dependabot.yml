@@ -9,6 +9,10 @@ updates:
       - chore
     commit-message:
       prefix: build(deps)
+    # Las versiones mayores se migran a mano con `ng update` (en una issue propia).
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       angular:
         patterns:
