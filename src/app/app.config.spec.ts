@@ -1,8 +1,7 @@
-import { HttpClient, HttpHeaders, provideHttpClient, withInterceptors, withXsrfConfiguration } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationInitStatus } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 
 import { appConfig } from './app.config';
 import { Usuario } from './core/models/usuario.model';
@@ -40,20 +39,6 @@ describe('appConfig: inicializador de la sesión', () => {
     controller.expectNone('/api/auth/csrf');
   });
 
-  it('con la configuración real de la app, un POST lleva X-XSRF-TOKEN si existe la cookie', async () => {
-    controller.expectOne('/api/auth/me').flush(ANA);
-    await estado.donePromise;
-    document.cookie = 'XSRF-TOKEN=token-real; path=/';
-    try {
-      TestBed.inject(HttpClient).post('/api/reservas', {}).subscribe();
-      const req = controller.expectOne('/api/reservas');
-      expect(req.request.headers.get('X-XSRF-TOKEN')).toBe('token-real');
-      req.flush(null);
-    } finally {
-      borrarCookie('XSRF-TOKEN');
-    }
-  });
-
   it('/me 401: la app arranca anónima y pide el csrf', async () => {
     controller.expectOne('/api/auth/me').flush(null, { status: 401, statusText: 'Unauthorized' });
     controller.expectOne('/api/auth/csrf').flush(null, { status: 204, statusText: 'No Content' });
@@ -76,26 +61,21 @@ describe('appConfig: inicializador de la sesión', () => {
 });
 
 /**
- * Comprueba la cabecera `X-XSRF-TOKEN` con el interceptor XSRF real de Angular.
- * Límite: se usa la misma configuración (`withXsrfConfiguration`) que `appConfig`, pero
- * no el `withFetch()` real, porque `HttpClientTestingBackend` sustituye al backend; el
- * interceptor XSRF se ejecuta antes del backend, así que el resultado es equivalente.
+ * Comprueba la cabecera `X-XSRF-TOKEN` con los providers reales de `appConfig` (interceptor
+ * XSRF de Angular incluido). Solo se sustituye el backend HTTP por el de pruebas.
  */
 describe('protección CSRF (X-XSRF-TOKEN)', () => {
   let http: HttpClient;
   let controller: HttpTestingController;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     borrarCookie('XSRF-TOKEN');
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter([]),
-        provideHttpClient(withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }), withInterceptors([])),
-        provideHttpClientTesting(),
-      ],
-    });
+    TestBed.configureTestingModule({ providers: [...appConfig.providers, provideHttpClientTesting()] });
     http = TestBed.inject(HttpClient);
     controller = TestBed.inject(HttpTestingController);
+    // Se resuelve el inicializador de la sesión (/me) para que no quede nada pendiente.
+    controller.expectOne('/api/auth/me').flush(ANA);
+    await TestBed.inject(ApplicationInitStatus).donePromise;
   });
 
   afterEach(() => {
@@ -139,7 +119,7 @@ describe('protección CSRF (X-XSRF-TOKEN)', () => {
 
   it('no se envía a URLs absolutas de otro origen', () => {
     document.cookie = 'XSRF-TOKEN=token-abc; path=/';
-    http.post('https://otro.example.com/api/x', {}, { headers: new HttpHeaders() }).subscribe();
+    http.post('https://otro.example.com/api/x', {}).subscribe();
     const req = controller.expectOne('https://otro.example.com/api/x');
     expect(req.request.headers.has('X-XSRF-TOKEN')).toBeFalse();
     req.flush(null);

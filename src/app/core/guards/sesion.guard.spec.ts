@@ -1,8 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { Router, UrlTree, provideRouter } from '@angular/router';
+import { TestBed, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
+import { Observable, firstValueFrom, from } from 'rxjs';
 
 import { Usuario } from '../models/usuario.model';
 import { SesionService } from '../services/sesion.service';
@@ -12,9 +13,6 @@ import { loginGuard, sesionGuard } from './sesion.guard';
 class VacioComponent {}
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
-
-/** Deja que el router llegue al guard y éste lance su petición. */
-const esperar = () => new Promise<void>((r) => setTimeout(r));
 
 describe('guards de sesión', () => {
   let router: Router;
@@ -41,6 +39,20 @@ describe('guards de sesión', () => {
 
   afterEach(() => http.verify());
 
+  /**
+   * Ejecuta el guard directamente para la URL pedida, sin pasar por la navegación del router,
+   * y devuelve su resultado: `true`, o la URL serializada de la redirección.
+   * La petición a `/me`, si el guard la hace, queda pendiente de responder en `http`.
+   */
+  function ejecutarGuard(guard: CanActivateFn, url: string): Promise<true | false | string> {
+    const resultado = TestBed.runInInjectionContext(() =>
+      guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot),
+    );
+    return firstValueFrom(from(resultado as Observable<boolean | UrlTree>)).then((r) =>
+      typeof r === 'boolean' ? r : router.serializeUrl(r),
+    );
+  }
+
   describe('sesionGuard', () => {
     it('con sesión deja pasar', async () => {
       sesion.establecer(ANA);
@@ -56,58 +68,50 @@ describe('guards de sesión', () => {
 
     it('con sesión anónima no pregunta de nuevo al servidor', async () => {
       sesion.limpiar();
-      await router.navigateByUrl('/protegida');
+      expect(await ejecutarGuard(sesionGuard, '/protegida')).toBe('/login?returnUrl=%2Fprotegida');
       http.expectNone('/api/auth/me');
-      expect(router.url).toContain('/login');
     });
 
     it('estado desconocido: pregunta a /me y, si responde 200, deja pasar', async () => {
-      const nav = router.navigateByUrl('/protegida');
-      await esperar();
+      const resultado = ejecutarGuard(sesionGuard, '/protegida');
       http.expectOne('/api/auth/me').flush(ANA);
-      expect(await nav).toBeTrue();
-      expect(router.url).toBe('/protegida');
+      expect(await resultado).toBeTrue();
       expect(sesion.usuario()).toEqual(ANA);
     });
 
     it('estado desconocido: /me 401 → /login con returnUrl', async () => {
-      const nav = router.navigateByUrl('/protegida');
-      await esperar();
+      const resultado = ejecutarGuard(sesionGuard, '/protegida');
       http.expectOne('/api/auth/me').flush(null, { status: 401, statusText: 'Unauthorized' });
       http.expectOne('/api/auth/csrf').flush(null);
-      await nav;
-      expect(router.url).toBe('/login?returnUrl=%2Fprotegida');
+      expect(await resultado).toBe('/login?returnUrl=%2Fprotegida');
     });
 
     it('estado desconocido y el servidor no responde → /error/no-disponible con returnUrl', async () => {
-      const nav = router.navigateByUrl('/protegida');
-      await esperar();
+      const resultado = ejecutarGuard(sesionGuard, '/protegida');
       http.expectOne('/api/auth/me').error(new ProgressEvent('error'));
-      await nav;
-      expect(router.url).toBe('/error/no-disponible?returnUrl=%2Fprotegida');
+      expect(await resultado).toBe('/error/no-disponible?returnUrl=%2Fprotegida');
     });
 
-    it('la URL pedida es /login: el guard no se encadena (no pone returnUrl=/login)', async () => {
+    it('estado desconocido, integrado con el router: /me 401 lleva a /login', fakeAsync(() => {
+      void router.navigateByUrl('/protegida');
+      flushMicrotasks();
+      http.expectOne('/api/auth/me').flush(null, { status: 401, statusText: 'Unauthorized' });
+      http.expectOne('/api/auth/csrf').flush(null);
+      flush();
+      expect(router.url).toBe('/login?returnUrl=%2Fprotegida');
+    }));
+
+    it('la URL pedida es /login: no se encadena (no pone returnUrl=/login)', async () => {
       sesion.limpiar();
-      const arbol = TestBed.runInInjectionContext(() =>
-        sesionGuard({} as never, { url: '/login' } as never),
-      ) as import('rxjs').Observable<boolean | UrlTree>;
-      let resultado: boolean | UrlTree | undefined;
-      arbol.subscribe((r) => (resultado = r));
-      expect(resultado instanceof UrlTree).toBeTrue();
-      expect(router.serializeUrl(resultado as UrlTree)).toBe('/login');
+      expect(await ejecutarGuard(sesionGuard, '/login')).toBe('/login');
     });
 
-    it('returnUrl de una URL externa o de error no se propaga', async () => {
-      sesion.limpiar();
-      for (const url of ['//evil.com', '/error/inesperado']) {
-        let resultado: boolean | UrlTree | undefined;
-        (TestBed.runInInjectionContext(() => sesionGuard({} as never, { url } as never)) as import('rxjs').Observable<
-          boolean | UrlTree
-        >).subscribe((r) => (resultado = r));
-        expect(router.serializeUrl(resultado as UrlTree)).toBe('/login');
-      }
-    });
+    for (const url of ['//evil.com', '/error/inesperado', '/login?returnUrl=%2Fx']) {
+      it(`returnUrl no seguro «${url}» no se propaga`, async () => {
+        sesion.limpiar();
+        expect(await ejecutarGuard(sesionGuard, url)).toBe('/login');
+      });
+    }
   });
 
   describe('loginGuard', () => {
@@ -124,19 +128,15 @@ describe('guards de sesión', () => {
     });
 
     it('estado desconocido con /me 200 → /reservas', async () => {
-      const nav = router.navigateByUrl('/login');
-      await esperar();
+      const resultado = ejecutarGuard(loginGuard, '/login');
       http.expectOne('/api/auth/me').flush(ANA);
-      await nav;
-      expect(router.url).toBe('/reservas');
+      expect(await resultado).toBe('/reservas');
     });
 
     it('si no se puede comprobar la sesión, muestra igualmente el login', async () => {
-      const nav = router.navigateByUrl('/login');
-      await esperar();
+      const resultado = ejecutarGuard(loginGuard, '/login');
       http.expectOne('/api/auth/me').error(new ProgressEvent('error'));
-      expect(await nav).toBeTrue();
-      expect(router.url).toBe('/login');
+      expect(await resultado).toBeTrue();
     });
   });
 });

@@ -12,7 +12,8 @@ import { UltimoErrorService } from './ultimo-error.service';
 /**
  * Interceptor HTTP que gestiona de forma centralizada la sesión caducada y los errores graves:
  *
- * - 401 → limpia el usuario y lleva a `/login?returnUrl=…`
+ * - 401 → limpia el usuario y lleva a `/login?returnUrl=…`, salvo si la sesión ha cambiado
+ *   desde que salió la petición (entonces solo se propaga el error)
  * - status 0, 502, 503, 504 o 5xx sin `ProblemDetail` válido → `/error/no-disponible?returnUrl=…`
  * - 5xx con `ProblemDetail` → `/error/inesperado`
  * - 403 → `/error/sin-permiso`
@@ -31,6 +32,7 @@ export const erroresInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const ultimoError = inject(UltimoErrorService);
   const sesion = inject(SesionService);
+  const generacion = sesion.generacion();
 
   return next(req).pipe(
     catchError((error: unknown) => {
@@ -39,6 +41,10 @@ export const erroresInterceptor: HttpInterceptorFn = (req, next) => {
       }
       const origen = urlActual(router);
       if (error.status === 401) {
+        if (sesion.generacion() !== generacion) {
+          // La petición salió con otra sesión (p. ej. antes de un login nuevo): no se cierra la actual.
+          return throwError(() => error);
+        }
         sesion.limpiar();
         if (esRutaLogin(origen)) {
           return EMPTY;

@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 
 import { ERRORES_PROPIOS } from '../http/errores-propios';
 import { Usuario } from '../models/usuario.model';
@@ -100,6 +100,27 @@ describe('AuthService', () => {
       http.expectNone('/api/auth/csrf');
     });
 
+    it('/me sin respuesta en 5 s: «desconocido», no bloquea y no pide csrf', fakeAsync(() => {
+      const r = restaurar();
+      const req = http.expectOne('/api/auth/me');
+      tick(4999);
+      expect(r.estado).toBeUndefined();
+      tick(1);
+      expect(r.estado).toBe('desconocido');
+      expect(r.error).toBeUndefined();
+      expect(sesion.estado()).toBe('desconocido');
+      expect(req.cancelled).toBeTrue();
+      http.expectNone('/api/auth/csrf');
+    }));
+
+    it('/me que responde antes de 5 s no se ve afectado por el timeout', fakeAsync(() => {
+      const r = restaurar();
+      tick(4000);
+      http.expectOne('/api/auth/me').flush(ANA);
+      tick(5000);
+      expect(r.estado).toBe('autenticado');
+    }));
+
     it('500: «desconocido» y no falla', () => {
       const r = restaurar();
       http.expectOne('/api/auth/me').flush(null, { status: 500, statusText: 'Error' });
@@ -132,12 +153,58 @@ describe('AuthService', () => {
       expect(sesion.usuario()).toEqual(ANA);
     });
 
-    it('declara que gestiona él mismo el 400 y el 401', () => {
+    it('declara que gestiona él mismo el 400, el 401 y el 403', () => {
       auth.login(CRED).subscribe();
       http.expectOne('/api/auth/csrf').flush(null);
       const req = http.expectOne('/api/auth/login');
-      expect(req.request.context.get(ERRORES_PROPIOS)).toEqual([400, 401]);
+      expect(req.request.context.get(ERRORES_PROPIOS)).toEqual([400, 401, 403]);
       req.flush(ANA);
+    });
+
+    it('403 (csrf no válido): renueva el csrf y reintenta el login una sola vez', () => {
+      let usuario: Usuario | undefined;
+      auth.login(CRED).subscribe((u) => (usuario = u));
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 403, statusText: 'Forbidden' });
+      http.expectOne('/api/auth/csrf').flush(null);
+      const reintento = http.expectOne('/api/auth/login');
+      expect(reintento.request.method).toBe('POST');
+      expect(reintento.request.body).toEqual(CRED);
+      reintento.flush(ANA);
+      expect(usuario).toEqual(ANA);
+      expect(sesion.usuario()).toEqual(ANA);
+    });
+
+    it('403 también en el reintento: propaga el 403 sin un tercer intento ni sesión', () => {
+      let error: { status?: number } | undefined;
+      auth.login(CRED).subscribe({ error: (e: { status?: number }) => (error = e) });
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 403, statusText: 'Forbidden' });
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 403, statusText: 'Forbidden' });
+      expect(error?.status).toBe(403);
+      expect(sesion.autenticado()).toBeFalse();
+      http.expectNone('/api/auth/csrf');
+      http.expectNone('/api/auth/login');
+    });
+
+    it('403 y reintento con 401: propaga el 401', () => {
+      let error: { status?: number } | undefined;
+      auth.login(CRED).subscribe({ error: (e: { status?: number }) => (error = e) });
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 403, statusText: 'Forbidden' });
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 401, statusText: 'Unauthorized' });
+      expect(error?.status).toBe(401);
+    });
+
+    it('401 no se reintenta', () => {
+      let error: { status?: number } | undefined;
+      auth.login(CRED).subscribe({ error: (e: { status?: number }) => (error = e) });
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 401, statusText: 'Unauthorized' });
+      expect(error?.status).toBe(401);
+      http.expectNone('/api/auth/csrf');
     });
 
     it('401: propaga el error y no inicia sesión', () => {

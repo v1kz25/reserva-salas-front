@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 
+import { Usuario } from '../models/usuario.model';
 import { SesionService } from '../services/sesion.service';
 import { conErroresPropios } from './errores-propios';
 import { erroresInterceptor } from './errores.interceptor';
@@ -130,6 +131,46 @@ describe('erroresInterceptor (sesión y permisos)', () => {
       controller.expectOne('/api/reservas/10').flush(null, sinSesion);
       expect(navigate).toHaveBeenCalledOnceWith(['/login'], { queryParams: { returnUrl: '/reservas/10' } });
       expect(sesion.autenticado()).toBeFalse();
+    });
+  });
+
+  describe('401 tardío (generación de la sesión)', () => {
+    const ANA2: Usuario = { id: 2, email: 'luis@example.com', nombre: 'Luis', rol: 'USER' };
+
+    it('si la sesión cambió desde que salió la petición, no la limpia ni redirige, y propaga el error', () => {
+      const r = lanzar('get', '/api/reservas');
+      const req = controller.expectOne('/api/reservas');
+      sesion.establecer(ANA2); // p. ej. un login nuevo mientras la petición vieja seguía en vuelo
+      req.flush(null, sinSesion);
+      expect(sesion.usuario()).toEqual(ANA2);
+      expect(navigate).not.toHaveBeenCalled();
+      expect((r.error as HttpErrorResponse).status).toBe(401);
+    });
+
+    it('también si la sesión se limpió entre medias (logout): no redirige', () => {
+      lanzar('get', '/api/reservas');
+      const req = controller.expectOne('/api/reservas');
+      sesion.limpiar();
+      req.flush(null, sinSesion);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('con la misma generación sí limpia la sesión y redirige', () => {
+      const generacion = sesion.generacion();
+      lanzar('get', '/api/reservas');
+      controller.expectOne('/api/reservas').flush(null, sinSesion);
+      expect(sesion.generacion()).toBeGreaterThan(generacion);
+      expect(sesion.autenticado()).toBeFalse();
+      expect(navigate).toHaveBeenCalledOnceWith(['/login'], { queryParams: { returnUrl: '/reservas?salaId=1' } });
+    });
+
+    it('la generación avanza con establecer() y con limpiar()', () => {
+      const g0 = sesion.generacion();
+      sesion.establecer(ANA2);
+      const g1 = sesion.generacion();
+      sesion.limpiar();
+      expect(g1).toBeGreaterThan(g0);
+      expect(sesion.generacion()).toBeGreaterThan(g1);
     });
   });
 

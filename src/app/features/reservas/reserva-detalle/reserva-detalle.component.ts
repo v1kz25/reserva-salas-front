@@ -101,8 +101,8 @@ export class ReservaDetalleComponent {
 
   /**
    * Envía la cancelación. Si va bien, vuelve al listado con un aviso; si la reserva ya no
-   * existía (`404`) o el servidor no lo permite (`403`), lo indica. Mientras hay una cancelación en curso se ignoran nuevas
-   * confirmaciones.
+   * existía (`404`) o el servidor no lo permite (`403`), lo indica. Mientras hay una
+   * cancelación en curso se ignoran nuevas confirmaciones.
    */
   confirmarCancelacion(): void {
     const reserva = this.reserva();

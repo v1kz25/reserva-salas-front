@@ -23,6 +23,9 @@ export class SesionService {
   /** Indica si el servidor ya ha respondido a la comprobación de la sesión. */
   private readonly _comprobada = signal(false);
 
+  /** Contador que cambia cada vez que se establece o se limpia la sesión. */
+  private readonly _generacion = signal(0);
+
   /** Usuario autenticado (solo lectura). */
   readonly usuario = this._usuario.asReadonly();
 
@@ -31,6 +34,12 @@ export class SesionService {
 
   /** Indica si el usuario en sesión es administrador. */
   readonly esAdmin = computed(() => this._usuario()?.rol === 'ADMIN');
+
+  /**
+   * Generación de la sesión: cambia en cada `establecer` y `limpiar`. Sirve para saber si
+   * un `401` llega de una petición lanzada con una sesión anterior.
+   */
+  readonly generacion = this._generacion.asReadonly();
 
   /** Estado de la sesión (ver `EstadoSesion`). */
   readonly estado = computed<EstadoSesion>(() => {
@@ -48,6 +57,7 @@ export class SesionService {
   establecer(usuario: Usuario): void {
     this._usuario.set(usuario);
     this._comprobada.set(true);
+    this._generacion.update((n) => n + 1);
   }
 
   /**
@@ -56,11 +66,11 @@ export class SesionService {
   limpiar(): void {
     this._usuario.set(undefined);
     this._comprobada.set(true);
+    this._generacion.update((n) => n + 1);
   }
 
   /**
-   * Indica si el usuario en sesión puede gestionar (cancelar) un recurso de otro usuario:
-   * si es suyo o si es administrador.
+   * Indica si el usuario puede gestionar un recurso: si es suyo o si es administrador.
    *
    * @param usuarioId Usuario propietario del recurso.
    */

@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 
 import { Usuario } from '../../../core/models/usuario.model';
 import { SesionService } from '../../../core/services/sesion.service';
-import { LoginComponent, MENSAJE_CREDENCIALES_INVALIDAS, MENSAJE_DATOS_INVALIDOS } from './login.component';
+import { LoginComponent, MENSAJE_CREDENCIALES_INVALIDAS, MENSAJE_DATOS_INVALIDOS, MENSAJE_LOGIN_FALLIDO } from './login.component';
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 
@@ -127,7 +127,8 @@ describe('LoginComponent', () => {
       enviar();
       await esperarRender();
       expect(el.querySelector('#email-error')?.textContent).toContain('email válido');
-      expect(el.querySelector('#password-error')?.textContent).toContain('Máximo 128');
+      // El atributo `maxlength` impide escribir más en el navegador; el validador sigue bloqueando el envío.
+      expect(el.querySelector('#password-error')?.textContent?.trim()).toBe('');
       http.expectNone('/api/auth/login');
     });
 
@@ -193,7 +194,8 @@ describe('LoginComponent', () => {
       );
       await esperarRender();
       expect(errorGeneral()?.textContent).toContain(MENSAJE_CREDENCIALES_INVALIDAS);
-      expect(errorGeneral()?.getAttribute('role')).toBe('alert');
+      // Se anuncia al recibir el foco; sin `role="alert"` para que no se lea dos veces.
+      expect(errorGeneral()?.getAttribute('role')).toBeNull();
       expect(input('password').value).toBe('');
       expect(input('email').value).toBe('ana@example.com');
       expect(boton().disabled).toBeFalse();
@@ -229,6 +231,33 @@ describe('LoginComponent', () => {
       expect(errorGeneral()?.textContent).toContain(MENSAJE_DATOS_INVALIDOS);
       expect(input('password').value).toBe('secreta');
       expect(boton().disabled).toBeFalse();
+    });
+
+    it('403 (csrf no válido): reintenta una vez con un csrf nuevo y, si va bien, entra', async () => {
+      rellenar();
+      enviar();
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 403, statusText: 'Forbidden' });
+      expect(errorGeneral()).toBeNull();
+      peticionLogin().flush(ANA);
+      await fixture.whenStable();
+      expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/reservas');
+      expect(errorGeneral()).toBeNull();
+    });
+
+    it('403 también en el reintento: muestra MENSAJE_LOGIN_FALLIDO, conserva la contraseña y reactiva el botón', async () => {
+      rellenar('ana@example.com', 'secreta');
+      enviar();
+      http.expectOne('/api/auth/csrf').flush(null);
+      http.expectOne('/api/auth/login').flush(null, { status: 403, statusText: 'Forbidden' });
+      peticionLogin().flush(null, { status: 403, statusText: 'Forbidden' });
+      await esperarRender();
+      expect(errorGeneral()?.textContent).toContain(MENSAJE_LOGIN_FALLIDO);
+      expect(input('password').value).toBe('secreta');
+      expect(boton().disabled).toBeFalse();
+      expect(document.activeElement).toBe(errorGeneral());
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+      http.expectNone('/api/auth/login');
     });
 
     it('error de red: no se queda cargando (el botón vuelve a estar activo)', async () => {

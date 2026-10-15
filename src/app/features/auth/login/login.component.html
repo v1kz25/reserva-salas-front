@@ -2,7 +2,7 @@
   <h1 id="titulo-login">Iniciar sesión</h1>
 
   @if (errorGeneral()) {
-    <p #errorRef id="login-error" class="error-general" role="alert" tabindex="-1">{{ errorGeneral() }}</p>
+    <p #errorRef id="login-error" class="error-general" tabindex="-1">{{ errorGeneral() }}</p>
   }
 
   <form #formRef [formGroup]="form" (ngSubmit)="entrar()" novalidate>
@@ -24,8 +24,6 @@
             <p class="error">Indica tu email.</p>
           } @else if (form.controls.email.hasError('email')) {
             <p class="error">Escribe un email válido, por ejemplo nombre&#64;empresa.com.</p>
-          } @else if (form.controls.email.hasError('maxlength')) {
-            <p class="error">Máximo 254 caracteres.</p>
           }
         }
       </div>
@@ -47,8 +45,6 @@
         @if (mostrarError('password')) {
           @if (form.controls.password.hasError('required')) {
             <p class="error">Indica tu contraseña.</p>
-          } @else if (form.controls.password.hasError('maxlength')) {
-            <p class="error">Máximo 128 caracteres.</p>
           }
         }
       </div>

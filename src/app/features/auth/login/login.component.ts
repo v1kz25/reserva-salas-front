@@ -23,6 +23,9 @@ export const MENSAJE_CREDENCIALES_INVALIDAS = 'El email o la contraseña no son 
 /** Mensaje si el servidor rechaza los datos por formato (`400`). */
 export const MENSAJE_DATOS_INVALIDOS = 'Revisa el email y la contraseña.';
 
+/** Mensaje si el login falla por el token CSRF (`403`) incluso tras renovarlo. */
+export const MENSAJE_LOGIN_FALLIDO = 'No se ha podido iniciar sesión. Recarga la página e inténtalo de nuevo.';
+
 /**
  * LoginComponent — formulario de inicio de sesión. Si va bien, vuelve a la URL de
  * origen (`returnUrl`) o al listado de reservas.
@@ -35,7 +38,7 @@ export const MENSAJE_DATOS_INVALIDOS = 'Revisa el email y la contraseña.';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
-  /** Mensaje de error general, que recibe el foco cuando aparece. */
+  /** Mensaje de error general, que recibe el foco cuando aparece (así se anuncia, sin `role="alert"`). */
   private readonly errorRef = viewChild<ElementRef<HTMLElement>>('errorRef');
 
   /** Formulario completo, para llevar el foco al primer campo con error. */
@@ -98,6 +101,8 @@ export class LoginComponent {
           if (problema.status === 401) {
             this.form.controls.password.reset();
             this.mostrarErrorGeneral(MENSAJE_CREDENCIALES_INVALIDAS);
+          } else if (problema.status === 403) {
+            this.mostrarErrorGeneral(MENSAJE_LOGIN_FALLIDO);
           } else if (problema.status === 400) {
             this.mostrarErrorGeneral(MENSAJE_DATOS_INVALIDOS);
           } else {
