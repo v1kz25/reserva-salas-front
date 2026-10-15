@@ -1,0 +1,87 @@
+<section aria-labelledby="titulo-salas">
+  <header class="cabecera">
+    <h1 id="titulo-salas" #tituloRef tabindex="-1">Salas</h1>
+    <a [routerLink]="rutaNueva" class="boton">Nueva sala</a>
+  </header>
+
+  <div role="status">
+    @if (aviso()) {
+      <p class="exito">{{ aviso() }}</p>
+    }
+  </div>
+
+  @if (errorEliminacion()) {
+    <p class="error-general" role="alert">{{ errorEliminacion() }}</p>
+  }
+
+  @if (errorRecarga()) {
+    <p class="aviso" role="alert">{{ errorRecarga() }}</p>
+  }
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando salas…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    <div class="tabla-desplazable" role="region" aria-labelledby="caption-salas" tabindex="0">
+      <table>
+        <caption id="caption-salas" class="visualmente-oculto">Listado de salas</caption>
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col">Capacidad</th>
+            <th scope="col">Planta</th>
+            <th scope="col"><span class="visualmente-oculto">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (sala of salas(); track sala.id) {
+            <tr>
+              <th scope="row">{{ sala.nombre }}</th>
+              <td>{{ sala.capacidad }}</td>
+              <td>{{ sala.planta }}</td>
+              <td>
+                <div class="acciones">
+                  <a [routerLink]="[rutaSalas, sala.id]" attr.aria-label="Editar la sala {{ sala.nombre }}">
+                    Editar
+                  </a>
+                  <button
+                    type="button"
+                    class="boton-secundario boton-tabla"
+                    attr.aria-label="Eliminar la sala {{ sala.nombre }}"
+                    (click)="pedirEliminacion(sala)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4">No hay salas. Crea la primera con «Nueva sala».</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <app-dialogo-confirmacion
+    titulo="Eliminar sala"
+    textoConfirmar="Sí, eliminar la sala"
+    textoProcesando="Eliminando…"
+    textoVolver="No, mantenerla"
+    [abierto]="salaAEliminar() !== undefined"
+    [procesando]="eliminando()"
+    (confirmado)="confirmarEliminacion()"
+    (cancelado)="cerrarDialogo()"
+  >
+    @if (salaAEliminar(); as pendiente) {
+      <p>
+        ¿Seguro que quieres eliminar la sala <strong>{{ pendiente.nombre }}</strong> (planta {{ pendiente.planta }},
+        {{ pendiente.capacidad }} personas)?
+      </p>
+      <p>Solo se puede eliminar si no tiene reservas futuras.</p>
+    }
+  </app-dialogo-confirmacion>
+</section>

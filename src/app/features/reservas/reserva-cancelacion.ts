@@ -14,32 +14,5 @@ export const MENSAJE_CANCELACION_SIN_PERMISO =
   'No se ha podido cancelar la reserva: no tienes permiso o tu sesión ha caducado. ' +
   'Recarga la página e inténtalo de nuevo.';
 
-/** Clave del estado de navegación con el aviso que debe mostrar el listado. */
-export const CLAVE_AVISO = 'aviso';
-
-/**
- * Lee el aviso que otra pantalla deja en el estado de navegación al volver al listado.
- *
- * @param estado Estado de la navegación (`Navigation.extras.state`).
- * @returns El aviso, si es un texto no vacío.
- */
-export function leerAviso(estado: Record<string, unknown> | undefined): string | undefined {
-  const aviso = estado?.[CLAVE_AVISO];
-  return typeof aviso === 'string' && aviso ? aviso : undefined;
-}
-
-/**
- * Quita el aviso del estado de la entrada actual del historial, para que no vuelva
- * a mostrarse al navegar hacia atrás o adelante. Conserva el resto del estado del router.
- *
- * @param historial Historial del navegador.
- */
-export function limpiarAvisoDelHistorial(historial: History): void {
-  const estado: unknown = historial.state;
-  if (typeof estado !== 'object' || estado === null || !(CLAVE_AVISO in estado)) {
-    return;
-  }
-  const resto: Record<string, unknown> = { ...(estado as Record<string, unknown>) };
-  delete resto[CLAVE_AVISO];
-  historial.replaceState(resto, '');
-}
+/** Utilidades del aviso en el estado de navegación, compartidas con otras pantallas. */
+export { CLAVE_AVISO, leerAviso, limpiarAvisoDelHistorial } from '../../shared/utils/aviso-navegacion';

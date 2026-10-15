@@ -1,6 +1,12 @@
 <header class="barra">
   <a routerLink="/reservas" class="marca">{{ title }}</a>
 
+  @if (sesion.esAdmin()) {
+    <nav class="navegacion" aria-label="Administración">
+      <a routerLink="/admin/salas" routerLinkActive="activo" ariaCurrentWhenActive="page">Salas</a>
+    </nav>
+  }
+
   @if (sesion.usuario(); as usuario) {
     <div class="sesion">
       <p class="usuario">

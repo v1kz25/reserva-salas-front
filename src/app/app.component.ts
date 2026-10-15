@@ -1,18 +1,19 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { RUTA_LOGIN } from './core/http/rutas-error';
 import { AuthService } from './core/services/auth.service';
 import { SesionService } from './core/services/sesion.service';
 
 /**
- * AppComponent — layout raíz con la cabecera de la aplicación (marca, usuario en
- * sesión y botón «Salir») y el contenedor de rutas.
+ * AppComponent — layout raíz con la cabecera de la aplicación (marca, enlaces de
+ * administración si el usuario es `ADMIN`, usuario en sesión y botón «Salir») y el
+ * contenedor de rutas.
  */
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

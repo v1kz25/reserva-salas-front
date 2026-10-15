@@ -125,4 +125,36 @@ describe('AppComponent: cabecera con la sesión', () => {
     expect(sesion.autenticado()).toBeFalse();
     expect(navegar).toHaveBeenCalledWith(['/login']);
   });
+
+  describe('enlace «Salas»', () => {
+    const enlace = () => el.querySelector('nav a[href="/admin/salas"]');
+
+    it('un ADMIN ve el enlace «Salas» en un nav', () => {
+      sesion.establecer(ADMIN);
+      fixture.detectChanges();
+      expect(enlace()?.textContent?.trim()).toBe('Salas');
+      expect(el.querySelector('nav')?.getAttribute('aria-label')).toBeTruthy();
+    });
+
+    it('un USER no ve el enlace', () => {
+      sesion.establecer(ANA);
+      fixture.detectChanges();
+      expect(enlace()).toBeNull();
+      expect(el.querySelector('nav')).toBeNull();
+    });
+
+    it('sin sesión no ve el enlace', () => {
+      sesion.limpiar();
+      fixture.detectChanges();
+      expect(enlace()).toBeNull();
+    });
+
+    it('el enlace desaparece al cerrar la sesión', () => {
+      sesion.establecer(ADMIN);
+      fixture.detectChanges();
+      sesion.limpiar();
+      fixture.detectChanges();
+      expect(enlace()).toBeNull();
+    });
+  });
 });
