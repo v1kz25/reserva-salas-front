@@ -22,11 +22,13 @@ import { FiltroReservas, Reserva } from '../../../core/models/reserva.model';
 import { Sala } from '../../../core/models/sala.model';
 import { ReservasService } from '../../../core/services/reservas.service';
 import { SalasService } from '../../../core/services/salas.service';
+import { SesionService } from '../../../core/services/sesion.service';
 import { DialogoConfirmacionComponent } from '../../../shared/components/dialogo-confirmacion/dialogo-confirmacion.component';
 import { HoraPipe } from '../../../shared/pipes/hora.pipe';
 import { focoPerdido } from '../../../shared/utils/foco';
 import {
   AVISO_RESERVA_CANCELADA,
+  MENSAJE_CANCELACION_SIN_PERMISO,
   MENSAJE_RESERVA_YA_CANCELADA,
   leerAviso,
   limpiarAvisoDelHistorial,
@@ -35,6 +37,7 @@ import { rangoFechasValidator } from './reserva-list.validators';
 
 /**
  * ReservaListComponent — listado de reservas con filtros por sala y rango de fechas.
+ * El botón «Cancelar» solo aparece en las reservas del usuario o si es administrador.
  */
 @Component({
   selector: 'app-reserva-list',
@@ -81,6 +84,9 @@ export class ReservaListComponent {
   protected readonly nombresSala = computed(
     () => new Map(this.salas().map((sala) => [sala.id, sala.nombre])),
   );
+
+  /** Sesión actual, para decidir qué reservas puede cancelar el usuario. */
+  protected readonly sesion = inject(SesionService);
 
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly reservasService = inject(ReservasService);
@@ -208,7 +214,8 @@ export class ReservaListComponent {
 
   /**
    * Envía la cancelación de la reserva confirmada. Si va bien, la quita del listado y lo
-   * recarga; si la reserva ya no existía (`404`), lo indica y también recarga el listado.
+   * recarga; si la reserva ya no existía (`404`), lo indica y también recarga el listado;
+   * si el servidor no lo permite (`403`), lo indica.
    * Mientras hay una cancelación en curso se ignoran nuevas confirmaciones.
    */
   confirmarCancelacion(): void {
@@ -238,6 +245,8 @@ export class ReservaListComponent {
             this.quitarDelListado(reserva.id);
             this.errorCancelacion.set(MENSAJE_RESERVA_YA_CANCELADA);
             this.recarga.next();
+          } else if (problema.status === 403) {
+            this.errorCancelacion.set(MENSAJE_CANCELACION_SIN_PERMISO);
           } else {
             this.errorCancelacion.set(problema.detail ?? problema.title);
           }

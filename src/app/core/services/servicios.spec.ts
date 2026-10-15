@@ -49,7 +49,7 @@ describe('servicios HTTP', () => {
   });
 
   it('ReservasService.crear hace POST /api/reservas con el cuerpo', () => {
-    const body = { salaId: 1, fecha: '2026-10-05', horaInicio: '10:00', horaFin: '11:00', responsable: 'A', motivo: 'B' };
+    const body = { salaId: 1, fecha: '2026-10-05', horaInicio: '10:00', horaFin: '11:00', motivo: 'B' };
     TestBed.inject(ReservasService).crear(body).subscribe();
     const req = http.expectOne('/api/reservas');
     expect(req.request.method).toBe('POST');

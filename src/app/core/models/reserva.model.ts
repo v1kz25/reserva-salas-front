@@ -12,16 +12,19 @@ export interface Reserva {
   horaInicio: string;
   /** Hora de fin en formato `HH:mm`. */
   horaFin: string;
-  /** Persona responsable de la reserva. */
+  /** Identificador del usuario que hizo la reserva. */
+  usuarioId: number;
+  /** Nombre del usuario que hizo la reserva (solo lectura). */
   responsable: string;
   /** Motivo de la reserva. */
   motivo: string;
 }
 
 /**
- * Datos para crear una reserva (`ReservaRequest` del contrato).
+ * Datos para crear una reserva (`ReservaRequest` del contrato). El responsable
+ * no se envía: es siempre el usuario de la sesión.
  */
-export type ReservaRequest = Omit<Reserva, 'id'>;
+export type ReservaRequest = Pick<Reserva, 'salaId' | 'fecha' | 'horaInicio' | 'horaFin' | 'motivo'>;
 
 /**
  * Filtros opcionales del listado de reservas (`GET /api/reservas`).

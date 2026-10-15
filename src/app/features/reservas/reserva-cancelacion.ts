@@ -6,6 +6,10 @@ export const MENSAJE_RESERVA_YA_CANCELADA =
   'La reserva ya no existe: puede que se haya cancelado desde otra pestaña o por otra persona. ' +
   'Se ha actualizado el listado.';
 
+/** Mensaje que se muestra si el servidor no permite cancelar la reserva (`403`). */
+export const MENSAJE_CANCELACION_SIN_PERMISO =
+  'No tienes permiso para cancelar esta reserva: solo puede cancelarla quien la hizo o un administrador.';
+
 /** Clave del estado de navegación con el aviso que debe mostrar el listado. */
 export const CLAVE_AVISO = 'aviso';
 

@@ -16,13 +16,57 @@ body {
 }
 
 .barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.75rem 1.5rem;
+  color: #fff;
   background: var(--color-primario);
 
   .marca {
     color: #fff;
     font-weight: 600;
     text-decoration: none;
+  }
+
+  .sesion {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .usuario {
+    margin: 0;
+  }
+
+  .boton-barra {
+    padding: 0.25rem 0.75rem;
+    color: var(--color-primario);
+    background: #fff;
+    border: 1px solid #fff;
+
+    &:disabled {
+      opacity: 0.8;
+      cursor: not-allowed;
+    }
+  }
+
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+}
+
+.login {
+  max-width: 24rem;
+  margin: 2rem auto 0;
+
+  .error-general:focus {
+    outline: 2px solid var(--color-error);
+    outline-offset: 2px;
   }
 }
 

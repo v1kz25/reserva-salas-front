@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { conErroresPropios } from '../http/errores-propios';
 import { FiltroReservas, Reserva, ReservaRequest } from '../models/reserva.model';
 
 /**
@@ -52,10 +53,12 @@ export class ReservasService {
 
   /**
    * Cancela (elimina) una reserva y deja libre su franja (`DELETE /api/reservas/{id}`).
+   * El `403` (la reserva es de otro usuario) lo gestiona quien llama, con un mensaje en
+   * la propia pantalla, en lugar de llevar a la página de «sin permiso».
    *
    * @param id Identificador de la reserva.
    */
   cancelar(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.url}/${id}`);
+    return this.http.delete<void>(`${this.url}/${id}`, { context: conErroresPropios([403]) });
   }
 }

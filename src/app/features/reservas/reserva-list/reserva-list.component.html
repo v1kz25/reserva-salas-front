@@ -97,14 +97,16 @@
                   >
                     Ver
                   </a>
-                  <button
-                    type="button"
-                    class="boton-secundario boton-tabla"
-                    attr.aria-label="Cancelar la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
-                    (click)="pedirCancelacion(reserva)"
-                  >
-                    Cancelar
-                  </button>
+                  @if (sesion.puedeGestionar(reserva.usuarioId)) {
+                    <button
+                      type="button"
+                      class="boton-secundario boton-tabla"
+                      attr.aria-label="Cancelar la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
+                      (click)="pedirCancelacion(reserva)"
+                    >
+                      Cancelar
+                    </button>
+                  }
                 </div>
               </td>
             </tr>

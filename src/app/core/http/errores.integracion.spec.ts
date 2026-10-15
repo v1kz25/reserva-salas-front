@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
 import { routes } from '../../app.routes';
+import { SesionService } from '../services/sesion.service';
 import { AHORA } from '../tokens/ahora.token';
 import { erroresInterceptor } from './errores.interceptor';
 import { UltimoErrorService } from './ultimo-error.service';
@@ -27,6 +28,7 @@ describe('gestión de errores (router real + componentes)', () => {
         { provide: AHORA, useValue: () => new Date(2026, 9, 1, 12, 30) },
       ],
     });
+    TestBed.inject(SesionService).establecer({ id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' });
     harness = await RouterTestingHarness.create();
     http = TestBed.inject(HttpTestingController);
     client = TestBed.inject(HttpClient);
@@ -56,7 +58,6 @@ describe('gestión de errores (router real + componentes)', () => {
     set('fecha', '2026-10-02');
     set('hora-inicio', '10:00');
     set('hora-fin', '11:00');
-    set('responsable', 'Ana');
     set('motivo', 'Reunión');
     harness.detectChanges();
     (el().querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
@@ -161,7 +162,6 @@ describe('gestión de errores (router real + componentes)', () => {
       set('fecha', '2026-10-02');
       set('hora-inicio', '10:00');
       set('hora-fin', '11:00');
-      set('responsable', 'Ana');
       set('motivo', 'Reunión');
       harness.detectChanges();
       (el().querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));

@@ -4,11 +4,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
+import { SesionService } from '../../../core/services/sesion.service';
 import { AVISO_RESERVA_CANCELADA } from '../reserva-cancelacion';
 import { ReservaDetalleComponent } from './reserva-detalle.component';
 
 const SALAS = [{ id: 2, nombre: 'Sala Sur', capacidad: 4, planta: -1 }];
-const RESERVA = { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', responsable: 'Ana', motivo: 'Daily' };
+const RESERVA = { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
 
 describe('ReservaDetalleComponent', () => {
   let fixture: ComponentFixture<ReservaDetalleComponent>;
@@ -28,6 +29,7 @@ describe('ReservaDetalleComponent', () => {
         { provide: ActivatedRoute, useValue: { paramMap: params } },
       ],
     }).compileComponents();
+    TestBed.inject(SesionService).establecer({ id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' });
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
     spyOn(router, 'navigate').and.resolveTo(true);

@@ -23,7 +23,9 @@
 
     <div class="acciones">
       <a routerLink="/reservas" class="boton-secundario">Volver al listado</a>
-      <button type="button" class="boton-peligro" (click)="pedirCancelacion()">Cancelar reserva</button>
+      @if (sesion.puedeGestionar(datos.usuarioId)) {
+        <button type="button" class="boton-peligro" (click)="pedirCancelacion()">Cancelar reserva</button>
+      }
     </div>
   } @else if (cargando()) {
     <p aria-live="polite">Cargando reserva…</p>
