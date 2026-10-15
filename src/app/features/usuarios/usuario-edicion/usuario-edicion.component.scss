@@ -1,0 +1,18 @@
+.casilla {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+
+  input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+  }
+}
+
+select:disabled,
+input:disabled {
+  color: #4a4d52;
+  background: #f3f4f6;
+  cursor: not-allowed;
+}

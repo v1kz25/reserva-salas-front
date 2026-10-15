@@ -64,6 +64,27 @@ export const routes: Routes = [
     loadComponent: () => import('./features/salas/sala-form/sala-form.component').then((m) => m.SalaFormComponent),
   },
   {
+    path: 'admin/usuarios',
+    title: 'Usuarios',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () =>
+      import('./features/usuarios/usuario-list/usuario-list.component').then((m) => m.UsuarioListComponent),
+  },
+  {
+    path: 'admin/usuarios/nuevo',
+    title: 'Nuevo usuario',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () =>
+      import('./features/usuarios/usuario-alta/usuario-alta.component').then((m) => m.UsuarioAltaComponent),
+  },
+  {
+    path: 'admin/usuarios/:id',
+    title: 'Editar usuario',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () =>
+      import('./features/usuarios/usuario-edicion/usuario-edicion.component').then((m) => m.UsuarioEdicionComponent),
+  },
+  {
     path: 'admin/ajustes',
     title: 'Ajustes',
     canActivate: [sesionGuard, adminGuard],

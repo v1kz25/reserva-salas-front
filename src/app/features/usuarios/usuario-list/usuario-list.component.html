@@ -1,0 +1,124 @@
+<section aria-labelledby="titulo-usuarios">
+  <header class="cabecera">
+    <h1 id="titulo-usuarios" #tituloRef tabindex="-1">Usuarios</h1>
+    <a [routerLink]="rutaNuevo" class="boton">Nuevo usuario</a>
+  </header>
+
+  <div role="status">
+    @if (aviso()) {
+      <p class="exito">{{ aviso() }}</p>
+    }
+  </div>
+
+  @if (errorCambio()) {
+    <p class="error-general" role="alert">{{ errorCambio() }}</p>
+  }
+
+  @if (errorRecarga()) {
+    <p class="aviso" role="alert">{{ errorRecarga() }}</p>
+  }
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando usuarios…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    <div class="tabla-desplazable" role="region" aria-labelledby="caption-usuarios" tabindex="0">
+      <table>
+        <caption id="caption-usuarios" class="visualmente-oculto">Listado de usuarios</caption>
+        <thead>
+          <tr>
+            <th scope="col">Email</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Rol</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Fecha de alta</th>
+            <th scope="col"><span class="visualmente-oculto">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (fila of filas(); track fila.usuario.id) {
+            <tr [class.inactivo]="!fila.usuario.activo">
+              <th scope="row">{{ fila.usuario.email }}</th>
+              <td>
+                {{ fila.usuario.nombre }}
+                @if (fila.propio) {
+                  <span class="propio">(tú)</span>
+                }
+              </td>
+              <td>{{ fila.rol }}</td>
+              <td>
+                <span class="estado" [class.estado-inactivo]="!fila.usuario.activo">
+                  {{ fila.usuario.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td>
+                <time [attr.datetime]="fila.usuario.fechaCreacion">{{ fila.fechaAlta }}</time>
+              </td>
+              <td>
+                <div class="acciones">
+                  <a
+                    [routerLink]="[rutaUsuarios, fila.usuario.id]"
+                    attr.aria-label="Editar al usuario {{ fila.usuario.nombre }} ({{ fila.usuario.email }})"
+                  >
+                    Editar
+                  </a>
+                  @if (fila.propio) {
+                    <button
+                      type="button"
+                      class="boton-secundario boton-tabla"
+                      aria-disabled="true"
+                      attr.aria-label="Desactivar al usuario {{ fila.usuario.nombre }} ({{ fila.usuario.email }})"
+                      aria-describedby="usuario-propio-ayuda"
+                    >
+                      Desactivar
+                    </button>
+                    <span id="usuario-propio-ayuda" class="ayuda">{{ mensajeNoDesactivarse }}</span>
+                  } @else {
+                    <button
+                      type="button"
+                      class="boton-secundario boton-tabla"
+                      attr.aria-label="{{ fila.usuario.activo ? 'Desactivar' : 'Activar' }} al usuario {{ fila.usuario.nombre }} ({{ fila.usuario.email }})"
+                      (click)="pedirCambioEstado(fila.usuario)"
+                    >
+                      {{ fila.usuario.activo ? 'Desactivar' : 'Activar' }}
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">No hay usuarios.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <app-dialogo-confirmacion
+    [titulo]="tituloDialogo()"
+    [textoConfirmar]="textoConfirmarDialogo()"
+    textoProcesando="Guardando…"
+    textoVolver="No, dejarlo como está"
+    [abierto]="usuarioACambiar() !== undefined"
+    [procesando]="cambiando()"
+    (confirmado)="confirmarCambioEstado()"
+    (cancelado)="cerrarDialogo()"
+  >
+    @if (usuarioACambiar(); as pendiente) {
+      @if (pendiente.activo) {
+        <p>
+          ¿Seguro que quieres desactivar a <strong>{{ pendiente.nombre }}</strong> ({{ pendiente.email }})?
+        </p>
+        <p>No podrá iniciar sesión y se cerrarán sus sesiones abiertas. Podrás volver a activarlo más adelante.</p>
+      } @else {
+        <p>
+          ¿Seguro que quieres activar a <strong>{{ pendiente.nombre }}</strong> ({{ pendiente.email }})?
+        </p>
+        <p>Podrá volver a iniciar sesión.</p>
+      }
+    }
+  </app-dialogo-confirmacion>
+</section>
