@@ -1,0 +1,219 @@
+<section aria-labelledby="titulo-amigos-pagina">
+  <h1 id="titulo-amigos-pagina" #tituloPagina tabindex="-1">Amigos</h1>
+
+  <div role="status">
+    @if (aviso()) {
+      <p class="exito">{{ aviso() }}</p>
+    }
+  </div>
+
+  @if (errorAccion()) {
+    <p class="error-general" role="alert">{{ errorAccion() }}</p>
+  }
+
+  @if (errorRecarga()) {
+    <p class="aviso" role="alert">{{ errorRecarga() }}</p>
+  }
+
+  <section class="bloque" aria-labelledby="titulo-buscar">
+    <h2 id="titulo-buscar">Buscar personas</h2>
+    <form role="search" aria-labelledby="titulo-buscar" (submit)="$event.preventDefault()">
+      <div class="campo">
+        <label for="busqueda-nombre">Nombre</label>
+        <input
+          #campoBusqueda
+          id="busqueda-nombre"
+          type="search"
+          autocomplete="off"
+          [maxlength]="maxBusqueda"
+          aria-describedby="busqueda-ayuda"
+          aria-controls="resultados-busqueda"
+          [formControl]="termino"
+        />
+        <span id="busqueda-ayuda" class="ayuda">Escribe al menos {{ minBusqueda }} caracteres.</span>
+      </div>
+    </form>
+
+    <div aria-live="polite">
+      @if (buscando()) {
+        <p>Buscando…</p>
+      } @else if (busqueda(); as resultado) {
+        @if (resultado.usuarios.length === 0) {
+          <p>No se ha encontrado a nadie con «{{ resultado.termino }}».</p>
+        } @else {
+          <p class="visualmente-oculto">
+            {{ resultado.usuarios.length === 1 ? '1 persona encontrada' : resultado.usuarios.length + ' personas encontradas' }}
+          </p>
+        }
+      }
+    </div>
+
+    @if (errorBusqueda()) {
+      <div class="acciones">
+        <p class="error" role="alert">{{ errorBusqueda() }}</p>
+        <button type="button" class="boton-secundario boton-tabla" (click)="reintentarBusqueda()">
+          Reintentar<span class="visualmente-oculto"> la búsqueda</span>
+        </button>
+      </div>
+    }
+
+    <ul id="resultados-busqueda" class="lista" aria-label="Personas encontradas" [hidden]="resultados().length === 0">
+      @for (resultado of resultados(); track resultado.usuario.id) {
+        <li class="fila">
+          <span class="nombre">{{ resultado.usuario.nombre }}</span>
+          @switch (resultado.relacion) {
+            @case ('disponible') {
+              <button
+                type="button"
+                class="boton boton-tabla"
+                [attr.aria-disabled]="accionEnCurso() !== undefined"
+                [attr.aria-busy]="enCurso('enviar-' + resultado.usuario.id)"
+                (click)="enviarSolicitud(resultado.usuario)"
+              >
+                {{ enCurso('enviar-' + resultado.usuario.id) ? 'Enviando…' : 'Enviar solicitud'
+                }}<span class="visualmente-oculto"> a {{ resultado.usuario.nombre }}</span>
+              </button>
+            }
+            @case ('enviada') {
+              <button
+                type="button"
+                class="boton-secundario boton-tabla"
+                aria-disabled="true"
+                [id]="idSolicitudEnviada(resultado.usuario.id)"
+              >
+                Solicitud enviada<span class="visualmente-oculto"> a {{ resultado.usuario.nombre }}</span>
+              </button>
+            }
+            @case ('recibida') {
+              <span class="estado">Te ha enviado una solicitud</span>
+            }
+            @case ('amigo') {
+              <span class="estado">Ya sois amigos</span>
+            }
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <div role="status">
+    @if (cargando()) {
+      <p>Cargando amistades…</p>
+    }
+  </div>
+
+  @if (cargando()) {
+    <!-- Sin contenido: el mensaje de carga va en la región de estado de arriba. -->
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else {
+    <section class="bloque" aria-labelledby="titulo-recibidas">
+      <h2 id="titulo-recibidas" #tituloRecibidas tabindex="-1">
+        Solicitudes recibidas
+        @if (recibidas().length > 0) {
+          <span class="contador">({{ recibidas().length }})</span>
+        }
+      </h2>
+      <ul class="lista">
+        @for (solicitud of recibidas(); track solicitud.id) {
+          <li class="fila">
+            <span class="nombre">
+              {{ solicitud.usuario.nombre }}
+              <span class="fecha">{{ solicitud.fecha | fechaLarga }}</span>
+            </span>
+            <span class="acciones">
+              <button
+                type="button"
+                class="boton boton-tabla"
+                [attr.aria-disabled]="accionEnCurso() !== undefined"
+                [attr.aria-busy]="enCurso('aceptar-' + solicitud.id)"
+                (click)="aceptar(solicitud)"
+              >
+                {{ enCurso('aceptar-' + solicitud.id) ? 'Aceptando…' : 'Aceptar'
+                }}<span class="visualmente-oculto"> la solicitud de {{ solicitud.usuario.nombre }}</span>
+              </button>
+              <button
+                type="button"
+                class="boton-secundario boton-tabla"
+                [attr.aria-disabled]="accionEnCurso() !== undefined"
+                [attr.aria-busy]="enCurso('rechazar-' + solicitud.id)"
+                (click)="rechazar(solicitud)"
+              >
+                {{ enCurso('rechazar-' + solicitud.id) ? 'Rechazando…' : 'Rechazar'
+                }}<span class="visualmente-oculto"> la solicitud de {{ solicitud.usuario.nombre }}</span>
+              </button>
+            </span>
+          </li>
+        } @empty {
+          <li>No tienes solicitudes pendientes.</li>
+        }
+      </ul>
+    </section>
+
+    <section class="bloque" aria-labelledby="titulo-enviadas">
+      <h2 id="titulo-enviadas" #tituloEnviadas tabindex="-1">Solicitudes enviadas</h2>
+      <ul class="lista">
+        @for (solicitud of enviadas(); track solicitud.id) {
+          <li class="fila">
+            <span class="nombre">
+              {{ solicitud.usuario.nombre }}
+              <span class="fecha">{{ solicitud.fecha | fechaLarga }}</span>
+            </span>
+            <button
+              type="button"
+              class="boton-secundario boton-tabla"
+              [attr.aria-disabled]="accionEnCurso() !== undefined"
+              [attr.aria-busy]="enCurso('retirar-' + solicitud.id)"
+              (click)="retirar(solicitud)"
+            >
+              {{ enCurso('retirar-' + solicitud.id) ? 'Retirando…' : 'Retirar'
+              }}<span class="visualmente-oculto"> la solicitud enviada a {{ solicitud.usuario.nombre }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li>No has enviado solicitudes pendientes.</li>
+        }
+      </ul>
+    </section>
+
+    <section class="bloque" aria-labelledby="titulo-lista-amigos">
+      <h2 id="titulo-lista-amigos" #tituloAmigos tabindex="-1">Tus amigos</h2>
+      <ul class="lista">
+        @for (amigo of amigos(); track amigo.usuarioId) {
+          <li class="fila">
+            <span class="nombre">
+              {{ amigo.nombre }}
+              <span class="fecha">Amigos desde el {{ amigo.desde | fechaLarga }}</span>
+            </span>
+            <button
+              type="button"
+              class="boton-secundario boton-tabla"
+              [attr.aria-disabled]="accionEnCurso() !== undefined"
+              (click)="pedirEliminacion(amigo)"
+            >
+              Eliminar amistad<span class="visualmente-oculto"> con {{ amigo.nombre }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li>Aún no tienes amigos. Búscalos por su nombre y envíales una solicitud.</li>
+        }
+      </ul>
+    </section>
+  }
+
+  <app-dialogo-confirmacion
+    titulo="Eliminar amistad"
+    textoConfirmar="Sí, eliminar la amistad"
+    textoProcesando="Eliminando…"
+    textoVolver="No, mantenerla"
+    [abierto]="amigoAEliminar() !== undefined"
+    [procesando]="accionEnCurso() !== undefined"
+    (confirmado)="confirmarEliminacion()"
+    (cancelado)="cerrarDialogo()"
+  >
+    @if (amigoAEliminar(); as pendiente) {
+      <p>¿Seguro que quieres eliminar la amistad con <strong>{{ pendiente.nombre }}</strong>?</p>
+      <p>Dejaréis de ser amigos; para volver a serlo habrá que enviar otra solicitud.</p>
+    }
+  </app-dialogo-confirmacion>
+</section>

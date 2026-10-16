@@ -46,6 +46,12 @@ export const routes: Routes = [
       import('./features/reservas/reserva-detalle/reserva-detalle.component').then((m) => m.ReservaDetalleComponent),
   },
   {
+    path: 'amigos',
+    title: 'Amigos',
+    canActivate: [sesionGuard],
+    loadComponent: () => import('./features/amistades/amigos/amigos.component').then((m) => m.AmigosComponent),
+  },
+  {
     path: 'admin/salas',
     title: 'Salas',
     canActivate: [sesionGuard, adminGuard],

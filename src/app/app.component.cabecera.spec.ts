@@ -29,7 +29,11 @@ describe('AppComponent: cabecera con la sesión', () => {
     el = fixture.nativeElement as HTMLElement;
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // Petición del indicador de solicitudes pendientes, que se lanza al haber sesión.
+    http.match('/api/amistades/solicitudes/recibidas').forEach((req) => req.flush([]));
+    http.verify();
+  });
 
   const salir = () => Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Salir'));
 
@@ -133,14 +137,14 @@ describe('AppComponent: cabecera con la sesión', () => {
       sesion.establecer(ADMIN);
       fixture.detectChanges();
       expect(enlace()?.textContent?.trim()).toBe('Salas');
-      expect(el.querySelector('nav')?.getAttribute('aria-label')).toBeTruthy();
+      expect(el.querySelector('nav[aria-label="Administración"]')).not.toBeNull();
     });
 
     it('un USER no ve el enlace', () => {
       sesion.establecer(ANA);
       fixture.detectChanges();
       expect(enlace()).toBeNull();
-      expect(el.querySelector('nav')).toBeNull();
+      expect(el.querySelector('nav[aria-label="Administración"]')).toBeNull();
     });
 
     it('sin sesión no ve el enlace', () => {
