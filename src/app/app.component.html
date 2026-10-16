@@ -1,6 +1,18 @@
 <header class="barra">
   <a routerLink="/reservas" class="marca">{{ title }}</a>
 
+  @if (sesion.autenticado()) {
+    <nav class="navegacion" aria-label="Principal">
+      <a routerLink="/amigos" routerLinkActive="activo" ariaCurrentWhenActive="page">
+        Amigos
+        @if (pendientes() > 0) {
+          <span class="insignia" aria-hidden="true">{{ pendientes() }}</span>
+          <span class="visualmente-oculto">{{ textoPendientes() }}</span>
+        }
+      </a>
+    </nav>
+  }
+
   @if (sesion.esAdmin()) {
     <nav class="navegacion" aria-label="Administración">
       <a routerLink="/admin/salas" routerLinkActive="activo" ariaCurrentWhenActive="page">Salas</a>
