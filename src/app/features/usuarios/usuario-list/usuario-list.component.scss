@@ -1,0 +1,29 @@
+.inactivo {
+  color: #5c5f66;
+  background: #f3f4f6;
+}
+
+.estado {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid currentcolor;
+  border-radius: 1rem;
+}
+
+.estado-inactivo {
+  font-style: italic;
+}
+
+.propio {
+  font-size: 0.875rem;
+}
+
+.acciones {
+  flex-wrap: wrap;
+}
+
+.ayuda {
+  font-size: 0.875rem;
+  color: #4a4d52;
+}

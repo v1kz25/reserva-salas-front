@@ -61,6 +61,20 @@ export class SesionService {
   }
 
   /**
+   * Actualiza los datos del usuario en sesión (por ejemplo, su nombre tras editarlo en la
+   * gestión de usuarios) sin cambiar de sesión: no altera la generación. Si no hay sesión
+   * o el usuario es otro, no hace nada.
+   *
+   * @param usuario Datos actualizados del usuario.
+   */
+  actualizarDatos(usuario: Usuario): void {
+    const actual = this._usuario();
+    if (actual?.id === usuario.id) {
+      this._usuario.set({ id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
+    }
+  }
+
+  /**
    * Borra el usuario: el servidor ha confirmado que no hay sesión.
    */
   limpiar(): void {

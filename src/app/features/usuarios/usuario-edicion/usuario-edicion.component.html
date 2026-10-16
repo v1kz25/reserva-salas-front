@@ -1,0 +1,140 @@
+<section aria-labelledby="titulo-usuario-edicion">
+  <h1 id="titulo-usuario-edicion" #tituloRef tabindex="-1">Editar usuario</h1>
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando usuario…</p>
+  } @else if (noEncontrado()) {
+    <div class="error-general" role="alert">
+      <p><strong>El usuario no existe.</strong></p>
+      <p>Revisa el enlace o vuelve al listado.</p>
+    </div>
+    <a [routerLink]="rutaUsuarios" class="boton-secundario">Volver al listado</a>
+  } @else if (errorCarga()) {
+    <p class="error" role="alert">{{ errorCarga() }}</p>
+    <a [routerLink]="rutaUsuarios" class="boton-secundario">Volver al listado</a>
+  } @else if (usuario(); as datos) {
+    <dl class="ficha">
+      <dt>Email</dt>
+      <dd>{{ datos.email }}</dd>
+      <dt>Fecha de alta</dt>
+      <dd>
+        <time [attr.datetime]="datos.fechaCreacion">{{ fechaAlta() }}</time>
+      </dd>
+    </dl>
+
+    @if (propio()) {
+      <p class="ayuda">Es tu propia cuenta.</p>
+    }
+
+    @if (errorGeneral(); as problema) {
+      <div #errorRef class="error-general" role="alert" tabindex="-1">
+        @if (problema.status === 400) {
+          <p><strong>Revisa los datos del usuario.</strong></p>
+        } @else if (problema.status === 409) {
+          <p><strong>No se ha podido guardar el cambio.</strong></p>
+        } @else {
+          <p><strong>{{ problema.title }}</strong></p>
+        }
+        @if (problema.detail) {
+          <p>{{ problema.detail }}</p>
+        }
+        @if (erroresSinCampo().length > 0) {
+          <ul>
+            @for (error of erroresSinCampo(); track error.campo) {
+              <li>{{ etiqueta(error.campo) }}: {{ error.mensaje }}</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    <form #formRef [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+      <div class="campo">
+        <label for="nombre">Nombre</label>
+        <input
+          id="nombre"
+          type="text"
+          formControlName="nombre"
+          autocomplete="off"
+          [maxlength]="maxNombre"
+          required
+          [attr.aria-invalid]="mostrarError('nombre')"
+          aria-describedby="nombre-error"
+        />
+        <div id="nombre-error" aria-live="polite">
+          @if (mostrarError('nombre')) {
+            @if (form.controls.nombre.hasError('required') || form.controls.nombre.hasError('textoEnBlanco')) {
+              <p class="error">Indica el nombre.</p>
+            }
+            @if (form.controls.nombre.hasError('maxlength')) {
+              <p class="error">Máximo {{ maxNombre }} caracteres.</p>
+            }
+            @if (form.controls.nombre.getError('servidor'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="rol">Rol</label>
+        <select
+          id="rol"
+          formControlName="rol"
+          [attr.aria-invalid]="mostrarError('rol')"
+          [attr.aria-describedby]="propio() ? 'rol-ayuda rol-error' : 'rol-error'"
+        >
+          @for (rol of roles; track rol[0]) {
+            <option [value]="rol[0]">{{ rol[1] }}</option>
+          }
+        </select>
+        @if (propio()) {
+          <p id="rol-ayuda" class="ayuda">{{ mensajesPropio.rol }}</p>
+        }
+        <div id="rol-error" aria-live="polite">
+          @if (mostrarError('rol')) {
+            @if (form.controls.rol.getError('servidor'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            } @else {
+              <p class="error">Elige un rol.</p>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="campo campo-casilla">
+        <div class="casilla">
+          <input
+            id="activo"
+            type="checkbox"
+            formControlName="activo"
+            [attr.aria-invalid]="mostrarError('activo')"
+            [attr.aria-describedby]="propio() ? 'activo-ayuda activo-error' : 'activo-ayuda-general activo-error'"
+          />
+          <label for="activo">Activo (puede iniciar sesión)</label>
+        </div>
+        @if (propio()) {
+          <p id="activo-ayuda" class="ayuda">{{ mensajesPropio.activo }}</p>
+        } @else {
+          <p id="activo-ayuda-general" class="ayuda">
+            Al desactivarlo o cambiarle el rol se cierran sus sesiones abiertas.
+          </p>
+        }
+        <div id="activo-error" aria-live="polite">
+          @if (form.controls.activo.getError('servidor'); as mensaje) {
+            <p class="error">{{ mensaje }}</p>
+          }
+        </div>
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton" [disabled]="enviando()">
+          {{ enviando() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+        <a [routerLink]="rutaUsuarios" class="boton-secundario">Cancelar</a>
+      </div>
+    </form>
+
+    <app-cambio-password [usuarioId]="datos.id" [propio]="propio()" (noEncontrado)="marcarNoEncontrado()" />
+  }
+</section>
