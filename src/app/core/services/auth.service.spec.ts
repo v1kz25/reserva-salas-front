@@ -188,11 +188,11 @@ describe('AuthService', () => {
       expect(sesion.usuario()).toEqual(ANA);
     });
 
-    it('declara que gestiona él mismo el 400, el 401 y el 403', () => {
+    it('declara que gestiona él mismo el 400, el 401, el 403 y el 429', () => {
       auth.login(CRED).subscribe();
       http.expectOne('/api/auth/csrf').flush(null);
       const req = http.expectOne('/api/auth/login');
-      expect(req.request.context.get(ERRORES_PROPIOS)).toEqual([400, 401, 403]);
+      expect(req.request.context.get(ERRORES_PROPIOS)).toEqual([400, 401, 403, 429]);
       req.flush(ANA);
     });
 
@@ -240,6 +240,23 @@ describe('AuthService', () => {
       http.expectOne('/api/auth/login').flush(null, { status: 401, statusText: 'Unauthorized' });
       expect(error?.status).toBe(401);
       http.expectNone('/api/auth/csrf');
+    });
+
+    it('429 no se reintenta: propaga el error con su Retry-After y no inicia sesión', () => {
+      let error: { status?: number; headers?: { get(nombre: string): string | null } } | undefined;
+      auth.login(CRED).subscribe({ error: (e: typeof error) => (error = e) });
+      http.expectOne('/api/auth/csrf').flush(null);
+      http
+        .expectOne('/api/auth/login')
+        .flush(
+          { title: 'Demasiados intentos', status: 429 },
+          { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '300' } },
+        );
+      expect(error?.status).toBe(429);
+      expect(error?.headers?.get('Retry-After')).toBe('300');
+      expect(sesion.autenticado()).toBeFalse();
+      http.expectNone('/api/auth/csrf');
+      http.expectNone('/api/auth/login');
     });
 
     it('401: propaga el error y no inicia sesión', () => {
