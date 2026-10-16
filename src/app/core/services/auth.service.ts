@@ -51,7 +51,8 @@ export class AuthService {
   /**
    * Inicia sesión (`POST /api/auth/login`), pidiendo antes un token CSRF actualizado.
    * Si responde `403` (token CSRF no válido), renueva el token y reintenta una sola vez.
-   * El `400`, el `401` (credenciales no válidas) y el `403` del reintento los gestiona quien llama.
+   * El `400`, el `401` (credenciales no válidas), el `429` (demasiados intentos, que no se
+   * reintenta) y el `403` del reintento los gestiona quien llama.
    *
    * @param credenciales Email y contraseña.
    */
@@ -82,7 +83,7 @@ export class AuthService {
 
   private postLogin(credenciales: LoginRequest): Observable<Usuario> {
     return this.http.post<Usuario>(`${this.url}/login`, credenciales, {
-      context: conErroresPropios([400, 401, 403]),
+      context: conErroresPropios([400, 401, 403, 429]),
     });
   }
 

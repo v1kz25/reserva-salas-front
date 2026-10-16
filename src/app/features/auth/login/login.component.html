@@ -51,9 +51,24 @@
     </div>
 
     <div class="acciones">
-      <button type="submit" class="boton" [disabled]="enviando()">
+      <button
+        #botonRef
+        type="submit"
+        class="boton"
+        [disabled]="enviando() || bloqueado()"
+        [attr.aria-describedby]="bloqueado() ? 'login-espera' : null"
+      >
         {{ enviando() ? 'Entrando…' : 'Entrar' }}
       </button>
+      @if (bloqueado()) {
+        <!-- Sin aria-live: la cuenta atrás cambia cada segundo y no debe anunciarse. -->
+        <p id="login-espera">Podrás volver a intentarlo en {{ cuentaAtras() }}.</p>
+      }
+    </div>
+    <div id="login-estado" role="status">
+      @if (avisoEstado()) {
+        <p class="exito">{{ avisoEstado() }}</p>
+      }
     </div>
   </form>
 </section>

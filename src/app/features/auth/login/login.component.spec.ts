@@ -1,11 +1,21 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 
 import { Usuario } from '../../../core/models/usuario.model';
 import { SesionService } from '../../../core/services/sesion.service';
-import { LoginComponent, MENSAJE_CREDENCIALES_INVALIDAS, MENSAJE_DATOS_INVALIDOS, MENSAJE_LOGIN_FALLIDO } from './login.component';
+import { AHORA } from '../../../core/tokens/ahora.token';
+import {
+  LoginComponent,
+  MENSAJE_CREDENCIALES_INVALIDAS,
+  MENSAJE_DATOS_INVALIDOS,
+  MENSAJE_DEMASIADOS_INTENTOS,
+  MENSAJE_FIN_ESPERA,
+  MENSAJE_LOGIN_FALLIDO,
+  MAX_SEGUNDOS_RETRY_AFTER,
+  mensajeEspera,
+} from './login.component';
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 
@@ -15,19 +25,34 @@ describe('LoginComponent', () => {
   let router: Router;
   let el: HTMLElement;
 
-  async function crear(returnUrl: string | null = null): Promise<void> {
-    await TestBed.configureTestingModule({
+  /** Momento actual (ms) que devuelve `AHORA` en las pruebas; se avanza a mano junto con `tick`. */
+  let ahoraMs: number;
+  /** Veces que el componente ha consultado `AHORA`. */
+  let consultasReloj: number;
+
+  /** Configura el módulo y crea el componente sin esperas (válido también dentro de `fakeAsync`). */
+  function montar(returnUrl: string | null = null): void {
+    ahoraMs = new Date(2026, 9, 16, 10, 0, 0).getTime();
+    consultasReloj = 0;
+    TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
         {
+          provide: AHORA,
+          useValue: () => {
+            consultasReloj++;
+            return new Date(ahoraMs);
+          },
+        },
+        {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: convertToParamMap(returnUrl === null ? {} : { returnUrl }) } },
         },
       ],
-    }).compileComponents();
+    });
     http = TestBed.inject(HttpTestingController);
     router = TestBed.inject(Router);
     spyOn(router, 'navigateByUrl').and.resolveTo(true);
@@ -35,6 +60,11 @@ describe('LoginComponent', () => {
     el = fixture.nativeElement as HTMLElement;
     document.body.appendChild(el);
     fixture.detectChanges();
+  }
+
+  async function crear(returnUrl: string | null = null): Promise<void> {
+    montar(returnUrl);
+    await fixture.whenStable();
   }
 
   afterEach(() => {
@@ -269,6 +299,217 @@ describe('LoginComponent', () => {
       expect(boton().disabled).toBeFalse();
       expect(router.navigateByUrl).not.toHaveBeenCalled();
     });
+  });
+
+  describe('429 (demasiados intentos)', () => {
+    const espera = () => el.querySelector('#login-espera') as HTMLElement | null;
+    const estado = () => el.querySelector('#login-estado') as HTMLElement;
+
+    /** Envía el login y responde 429 con la cabecera `Retry-After` indicada (o sin ella). */
+    function responder429(retryAfter?: string): void {
+      rellenar('ana@example.com', 'mala');
+      enviar();
+      const headers: Record<string, string> = retryAfter === undefined ? {} : { 'Retry-After': retryAfter };
+      peticionLogin().flush(
+        { title: 'Demasiados intentos', status: 429, detail: 'Texto del servidor' },
+        { status: 429, statusText: 'Too Many Requests', headers },
+      );
+    }
+
+    /** Avanza el reloj de `AHORA` y los temporizadores de segundo en segundo. */
+    function avanzar(segundos: number): void {
+      for (let i = 0; i < segundos; i++) {
+        ahoraMs += 1000;
+        tick(1000);
+      }
+      fixture.detectChanges();
+    }
+
+    it('mensajeEspera redondea hacia arriba a minutos y usa «menos de un minuto» por debajo de 60 s', () => {
+      expect(mensajeEspera(1)).toBe('Has hecho demasiados intentos. Vuelve a intentarlo en menos de un minuto.');
+      expect(mensajeEspera(59)).toContain('en menos de un minuto.');
+      expect(mensajeEspera(60)).toBe('Has hecho demasiados intentos. Vuelve a intentarlo en 1 minuto.');
+      expect(mensajeEspera(61)).toBe('Has hecho demasiados intentos. Vuelve a intentarlo en 2 minutos.');
+      expect(mensajeEspera(300)).toBe('Has hecho demasiados intentos. Vuelve a intentarlo en 5 minutos.');
+      expect(mensajeEspera(301)).toContain('en 6 minutos.');
+    });
+
+    it('con Retry-After: mensaje con minutos, enfocado, contraseña vacía y botón desactivado con cuenta atrás', fakeAsync(() => {
+      montar();
+      responder429('300');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(errorGeneral()?.textContent?.trim()).toBe(mensajeEspera(300));
+      expect(errorGeneral()?.textContent).not.toContain('Texto del servidor');
+      expect(document.activeElement).toBe(errorGeneral());
+      expect(input('password').value).toBe('');
+      expect(input('email').value).toBe('ana@example.com');
+      expect(boton().disabled).toBeTrue();
+      expect(boton().textContent).toContain('Entrar');
+      expect(boton().getAttribute('aria-describedby')).toBe('login-espera');
+      expect(espera()?.textContent).toContain('5:00');
+      expect(router.navigateByUrl).not.toHaveBeenCalled();
+
+      avanzar(1);
+      expect(espera()?.textContent).toContain('4:59');
+      avanzar(234);
+      expect(espera()?.textContent).toContain('1:05');
+      expect(boton().disabled).toBeTrue();
+      expect(estado().textContent?.trim()).toBe('');
+
+      expect(document.activeElement).toBe(errorGeneral());
+      avanzar(65);
+      fixture.detectChanges();
+      expect(boton().disabled).toBeFalse();
+      expect(boton().getAttribute('aria-describedby')).toBeNull();
+      expect(espera()).toBeNull();
+      expect(estado().textContent?.trim()).toBe(MENSAJE_FIN_ESPERA);
+      // El mensaje del 429 ya no es cierto: desaparece y el foco que tenía pasa al botón «Entrar».
+      expect(errorGeneral()).toBeNull();
+      expect(document.activeElement).toBe(boton());
+      // El intervalo se ha parado: no quedan temporizadores periódicos (fakeAsync fallaría).
+    }));
+
+    it('al terminar la espera con el foco en otro sitio, se quita el mensaje y el foco no se mueve', fakeAsync(() => {
+      montar();
+      responder429('5');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      input('email').focus();
+      avanzar(5);
+      fixture.detectChanges();
+      expect(errorGeneral()).toBeNull();
+      expect(estado().textContent?.trim()).toBe(MENSAJE_FIN_ESPERA);
+      expect(document.activeElement).toBe(input('email'));
+    }));
+
+    it('menos de 60 s: «en menos de un minuto» y cuenta atrás en segundos', fakeAsync(() => {
+      montar();
+      responder429('45');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(errorGeneral()?.textContent).toContain('en menos de un minuto');
+      expect(espera()?.textContent).toContain('0:45');
+      avanzar(45);
+      expect(boton().disabled).toBeFalse();
+      expect(estado().textContent).toContain(MENSAJE_FIN_ESPERA);
+    }));
+
+    it('durante la espera no se puede enviar y, al terminar, se puede volver a intentar', fakeAsync(() => {
+      montar();
+      responder429('10');
+      fixture.detectChanges();
+      flush();
+      rellenar('ana@example.com', 'buena');
+      enviar();
+      http.expectNone('/api/auth/csrf');
+      http.expectNone('/api/auth/login');
+
+      avanzar(10);
+      enviar();
+      // Al reintentar se limpian el aviso de fin de espera y el mensaje anterior.
+      expect(estado().textContent?.trim()).toBe('');
+      expect(errorGeneral()).toBeNull();
+      const req = peticionLogin();
+      expect(req.request.body.password).toBe('buena');
+      req.flush(ANA);
+      flush();
+      expect(router.navigateByUrl).toHaveBeenCalledOnceWith('/reservas');
+    }));
+
+    it('no se reintenta: una sola petición de csrf y una de login', async () => {
+      await crear();
+      responder429('300');
+      await esperarRender();
+      http.expectNone('/api/auth/csrf');
+      http.expectNone('/api/auth/login');
+      expect(TestBed.inject(SesionService).autenticado()).toBeFalse();
+      fixture.destroy();
+    });
+
+    it('accesibilidad: la cuenta atrás no está en una región viva y el estado existe desde el principio', fakeAsync(() => {
+      montar();
+      expect(estado().getAttribute('role')).toBe('status');
+      expect(estado().textContent?.trim()).toBe('');
+      responder429('120');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      // El mensaje inicial se anuncia al recibir el foco, sin `role="alert"` (no se lee dos veces).
+      expect(errorGeneral()?.getAttribute('role')).toBeNull();
+      expect(document.activeElement).toBe(errorGeneral());
+      const cuenta = espera() as HTMLElement;
+      expect(cuenta.closest('[aria-live], [role="status"], [role="alert"], [role="timer"]')).toBeNull();
+      expect(estado().contains(cuenta)).toBeFalse();
+      // Mientras corre la cuenta atrás, la región `status` no cambia.
+      avanzar(30);
+      expect(estado().textContent?.trim()).toBe('');
+      avanzar(90);
+      expect(estado().textContent?.trim()).toBe(MENSAJE_FIN_ESPERA);
+    }));
+
+    it('al destruir el componente durante la espera se para la cuenta atrás', fakeAsync(() => {
+      montar();
+      responder429('300');
+      fixture.detectChanges();
+      flush();
+      avanzar(2);
+      const consultas = consultasReloj;
+      expect(consultas).toBeGreaterThan(0);
+      fixture.destroy();
+      // Si el intervalo siguiera activo, seguiría consultando el reloj (y fakeAsync fallaría por temporizadores pendientes).
+      ahoraMs += 5000;
+      tick(5000);
+      expect(consultasReloj).toBe(consultas);
+    }));
+
+    it('sin Retry-After: mensaje genérico sin tiempo, contraseña vacía y botón activo', async () => {
+      await crear();
+      responder429();
+      await esperarRender();
+      expect(errorGeneral()?.textContent?.trim()).toBe(MENSAJE_DEMASIADOS_INTENTOS);
+      expect(document.activeElement).toBe(errorGeneral());
+      expect(input('password').value).toBe('');
+      expect(boton().disabled).toBeFalse();
+      expect(espera()).toBeNull();
+    });
+
+    for (const invalido of ['', 'abc', '-5', '1.5', '0', '10s', 'Fri, 16 Oct 2026 10:05:00 GMT', '86401', '99999999999999999999']) {
+      it(`Retry-After no válido «${invalido}»: mensaje genérico y botón activo`, async () => {
+        await crear();
+        responder429(invalido);
+        await esperarRender();
+        expect(errorGeneral()?.textContent?.trim()).toBe(MENSAJE_DEMASIADOS_INTENTOS);
+        expect(boton().disabled).toBeFalse();
+        expect(espera()).toBeNull();
+      });
+    }
+
+    it('Retry-After de 24 h exactas (86400 s) se acepta y bloquea', fakeAsync(() => {
+      montar();
+      responder429(String(MAX_SEGUNDOS_RETRY_AFTER));
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(errorGeneral()?.textContent).toContain('en 1440 minutos');
+      expect(boton().disabled).toBeTrue();
+      expect(espera()?.textContent).toContain('1440:00');
+      fixture.destroy();
+    }));
+
+    it('Retry-After con espacios alrededor se acepta', fakeAsync(() => {
+      montar();
+      responder429(' 90 ');
+      fixture.detectChanges();
+      flush();
+      fixture.detectChanges();
+      expect(errorGeneral()?.textContent).toContain('en 2 minutos');
+      expect(espera()?.textContent).toContain('1:30');
+      avanzar(90);
+    }));
   });
 
   describe('returnUrl', () => {
