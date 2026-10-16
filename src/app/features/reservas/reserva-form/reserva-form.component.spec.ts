@@ -38,6 +38,9 @@ describe('ReservaFormComponent', () => {
     fixture = TestBed.createComponent(ReservaFormComponent);
     el = fixture.nativeElement as HTMLElement;
     fixture.detectChanges();
+    http
+      .expectOne('/api/config/zona-horaria')
+      .flush({ zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone });
     http.expectOne('/api/salas').flush(SALAS);
     fixture.detectChanges();
   });
@@ -130,6 +133,9 @@ describe('ReservaFormComponent', () => {
     const otro = TestBed.createComponent(ReservaFormComponent);
     const el2 = otro.nativeElement as HTMLElement;
     otro.detectChanges();
+    http
+      .expectOne('/api/config/zona-horaria')
+      .flush({ zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone });
     http.expectOne('/api/salas').flush(SALAS);
     otro.detectChanges();
     expect((el2.querySelector('#fecha') as HTMLInputElement).min).toBe('2027-01-01');
@@ -322,6 +328,9 @@ describe('ReservaFormComponent', () => {
   it('si falla GET /api/salas muestra un aviso con role=alert', () => {
     const otro = TestBed.createComponent(ReservaFormComponent);
     otro.detectChanges();
+    http
+      .expectOne('/api/config/zona-horaria')
+      .flush({ zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone });
     http
       .expectOne('/api/salas')
       .flush({ title: 'x', status: 500, detail: 'Fallo salas' }, { status: 500, statusText: 'e' });

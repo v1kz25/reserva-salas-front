@@ -53,3 +53,47 @@ describe('aPartirDeMananaValidator', () => {
     expect(aPartirDeMananaValidator()(fecha(y))).toEqual({ fechaNoPosteriorAHoy: true });
   });
 });
+
+describe('aPartirDeMananaValidator con zona horaria', () => {
+  const control = (valor: string) => new FormControl(valor);
+  const validar = (valor: string, ahora: string, zona?: string) =>
+    aPartirDeMananaValidator(
+      () => new Date(ahora),
+      () => zona,
+    )(control(valor));
+
+  it('2026-10-15T23:30Z en Madrid ya es día 16: el 16 no vale y el 17 sí', () => {
+    expect(validar('2026-10-16', '2026-10-15T23:30:00Z', 'Europe/Madrid')).toEqual({ fechaNoPosteriorAHoy: true });
+    expect(validar('2026-10-17', '2026-10-15T23:30:00Z', 'Europe/Madrid')).toBeNull();
+  });
+  it('2026-10-15T23:30Z en Nueva York es día 15: el 16 ya vale', () => {
+    expect(validar('2026-10-15', '2026-10-15T23:30:00Z', 'America/New_York')).toEqual({ fechaNoPosteriorAHoy: true });
+    expect(validar('2026-10-16', '2026-10-15T23:30:00Z', 'America/New_York')).toBeNull();
+  });
+  it('Tokio a 01:00Z: hoy es 15, el 16 vale', () => {
+    expect(validar('2026-10-15', '2026-10-15T01:00:00Z', 'Asia/Tokyo')).toEqual({ fechaNoPosteriorAHoy: true });
+    expect(validar('2026-10-16', '2026-10-15T01:00:00Z', 'Asia/Tokyo')).toBeNull();
+  });
+  it('cambio de hora en Madrid: 23:30Z del 25/10 ya es día 26', () => {
+    expect(validar('2026-10-26', '2026-10-25T23:30:00Z', 'Europe/Madrid')).toEqual({ fechaNoPosteriorAHoy: true });
+    expect(validar('2026-10-27', '2026-10-25T23:30:00Z', 'Europe/Madrid')).toBeNull();
+  });
+  it('lee la zona en cada validación (cambia en caliente)', () => {
+    let zona = 'Europe/Madrid';
+    const v = aPartirDeMananaValidator(() => new Date('2026-10-15T23:30:00Z'), () => zona);
+    expect(v(control('2026-10-16'))).not.toBeNull();
+    zona = 'America/New_York';
+    expect(v(control('2026-10-16'))).toBeNull();
+  });
+  it('zona no válida o ausente: usa la del navegador', () => {
+    const ahora = new Date(2026, 9, 15, 12, 0);
+    for (const zona of [undefined, 'Mars/Olympus']) {
+      const v = aPartirDeMananaValidator(() => ahora, () => zona);
+      expect(v(control('2026-10-15'))).not.toBeNull();
+      expect(v(control('2026-10-16'))).toBeNull();
+    }
+  });
+  it('valor vacío no se valida', () => {
+    expect(validar('', '2026-10-15T23:30:00Z', 'Europe/Madrid')).toBeNull();
+  });
+});

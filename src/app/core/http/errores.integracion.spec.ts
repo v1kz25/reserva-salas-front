@@ -35,7 +35,11 @@ describe('gestión de errores (router real + componentes)', () => {
     location = TestBed.inject(Location);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    // El formulario de reserva pide la zona horaria del servidor; aquí no influye.
+    http.match('/api/config/zona-horaria');
+    http.verify();
+  });
 
   const el = () => harness.routeNativeElement as HTMLElement;
   const reservas = () => http.match((r) => r.url === '/api/reservas');

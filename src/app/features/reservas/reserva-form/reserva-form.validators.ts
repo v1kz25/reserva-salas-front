@@ -1,6 +1,6 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-import { fechaIso } from '../../../shared/utils/fecha';
+import { fechaIsoEnZona } from '../../../shared/utils/fecha';
 
 /**
  * Valida que `horaFin` sea estrictamente posterior a `horaInicio`.
@@ -21,16 +21,21 @@ export const horaFinPosteriorValidator: ValidatorFn = (grupo: AbstractControl): 
  * Crea un validador que solo admite fechas a partir de mañana.
  *
  * Se aplica al control `fecha`. Devuelve `{ fechaNoPosteriorAHoy: true }` si el
- * día indicado es hoy o anterior. Un valor vacío no se valida.
+ * día indicado es hoy o anterior en la zona horaria indicada. Un valor vacío no se valida.
  *
  * @param ahora Función que devuelve el momento actual (inyectable para pruebas).
+ * @param zona Función que devuelve la zona horaria IANA con la que se calcula «hoy»;
+ *   si devuelve `undefined` (o una zona no válida), se usa la del navegador.
  */
-export function aPartirDeMananaValidator(ahora: () => Date = () => new Date()): ValidatorFn {
+export function aPartirDeMananaValidator(
+  ahora: () => Date = () => new Date(),
+  zona: () => string | undefined = () => undefined,
+): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const fecha = control.value as string | undefined;
     if (!fecha) {
       return null;
     }
-    return fecha > fechaIso(ahora()) ? null : { fechaNoPosteriorAHoy: true };
+    return fecha > fechaIsoEnZona(ahora(), zona()) ? null : { fechaNoPosteriorAHoy: true };
   };
 }

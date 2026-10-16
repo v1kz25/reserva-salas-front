@@ -66,10 +66,13 @@
         id="fecha"
         type="date"
         formControlName="fecha"
-        [min]="manana"
+        [min]="manana()"
         [attr.aria-invalid]="mostrarError('fecha')"
-        aria-describedby="fecha-error"
+        aria-describedby="fecha-ayuda fecha-error"
       />
+      <p id="fecha-ayuda" class="ayuda">
+        Se puede reservar a partir de mañana ({{ mananaLegible() }}, hora de {{ zonaHoraria() }}).
+      </p>
       <div id="fecha-error" aria-live="polite">
         @if (mostrarError('fecha')) {
           @if (form.controls.fecha.hasError('required')) {

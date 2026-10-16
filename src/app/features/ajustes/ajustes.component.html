@@ -1,0 +1,74 @@
+<section aria-labelledby="titulo-ajustes">
+  <h1 id="titulo-ajustes">Ajustes</h1>
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando ajustes…</p>
+  } @else if (errorCarga()) {
+    <p class="error" role="alert">No se ha podido cargar la zona horaria: {{ errorCarga() }}</p>
+  } @else {
+    <h2>Zona horaria</h2>
+    <p>
+      Zona horaria actual: <strong>{{ zonaActual() }}</strong>. Se usa para calcular a partir de qué día se
+      puede reservar.
+    </p>
+
+    @if (errorGeneral(); as problema) {
+      <div class="error-general" role="alert">
+        <p><strong>{{ problema.title }}</strong></p>
+        @if (problema.detail) {
+          <p>{{ problema.detail }}</p>
+        }
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+      <div class="campo">
+        <label for="zona-horaria">Nueva zona horaria</label>
+        <select
+          #selectorRef
+          id="zona-horaria"
+          formControlName="zonaHoraria"
+          [attr.aria-invalid]="mostrarError()"
+          aria-describedby="zona-horaria-ayuda zona-horaria-error"
+        >
+          <option value="" disabled>Selecciona una zona horaria</option>
+          <optgroup label="Más comunes">
+            @for (zona of grupos().comunes; track zona) {
+              <option [value]="zona">{{ zona }}</option>
+            }
+          </optgroup>
+          <optgroup label="Todas las zonas">
+            @for (zona of grupos().resto; track zona) {
+              <option [value]="zona">{{ zona }}</option>
+            }
+          </optgroup>
+        </select>
+        <p id="zona-horaria-ayuda" class="ayuda">
+          Con el selector enfocado, escribe el principio del nombre para buscar (por ejemplo, «Europe/Ma»).
+        </p>
+        <div id="zona-horaria-error" aria-live="polite">
+          @if (mostrarError()) {
+            @if (form.controls.zonaHoraria.hasError('required')) {
+              <p class="error">Selecciona una zona horaria.</p>
+            }
+            @if (form.controls.zonaHoraria.getError('servidor'); as mensaje) {
+              <p class="error">{{ mensaje }}</p>
+            }
+          }
+        </div>
+      </div>
+
+      <div class="acciones">
+        <button type="submit" class="boton" [disabled]="guardando()" [attr.aria-busy]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  }
+
+  <div role="status" class="exito">
+    @if (exito()) {
+      <p>{{ exito() }}</p>
+    }
+  </div>
+</section>

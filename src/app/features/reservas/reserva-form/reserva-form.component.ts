@@ -1,16 +1,24 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { interval } from 'rxjs';
 
 import { aProblemDetail } from '../../../core/http/problem-detail';
 import { ErrorCampo, ProblemDetail } from '../../../core/models/problem-detail.model';
 import { ReservaRequest } from '../../../core/models/reserva.model';
 import { Sala } from '../../../core/models/sala.model';
+import { ConfiguracionService } from '../../../core/services/configuracion.service';
 import { ReservasService } from '../../../core/services/reservas.service';
 import { SalasService } from '../../../core/services/salas.service';
 import { AHORA } from '../../../core/tokens/ahora.token';
-import { diaSiguiente, fechaIso } from '../../../shared/utils/fecha';
+import {
+  diaSiguienteIso,
+  esZonaValida,
+  fechaIsoEnZona,
+  fechaLegible,
+  zonaNavegador,
+} from '../../../shared/utils/fecha';
 import { aPartirDeMananaValidator, horaFinPosteriorValidator } from './reserva-form.validators';
 
 /** Campos del formulario que pueden recibir errores del servidor. */
@@ -21,6 +29,12 @@ const CAMPOS: readonly CampoReserva[] = ['salaId', 'fecha', 'horaInicio', 'horaF
 /**
  * ReservaFormComponent — formulario de alta de una reserva con validación en cliente
  * y presentación de los errores del backend. El responsable es el usuario de la sesión.
+ *
+ * «Mañana» se calcula en la zona horaria del servidor: al entrar se pide siempre
+ * `GET /api/config/zona-horaria`. Mientras llega se usa la última zona conocida
+ * (`ConfiguracionService`) o, si no hay ninguna, la del navegador; si la petición falla,
+ * se sigue con esa, sin bloquear el formulario. «Mañana» se recalcula cada minuto, para
+ * que avance si la pestaña sigue abierta pasada la medianoche.
  */
 @Component({
   selector: 'app-reserva-form',
@@ -50,16 +64,29 @@ export class ReservaFormComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly reservasService = inject(ReservasService);
   private readonly salasService = inject(SalasService);
+  private readonly configuracion = inject(ConfiguracionService);
   private readonly ahora = inject(AHORA);
 
-  /** Fecha mínima seleccionable (mañana, en formato `yyyy-MM-dd`). */
-  protected readonly manana = fechaIso(diaSiguiente(this.ahora()));
+  /** Reloj del formulario: el momento actual según `AHORA`, actualizado cada minuto. */
+  private readonly reloj = signal(this.ahora());
+
+  /** Zona horaria con la que se calcula «mañana»: la del servidor o, si no se conoce, la del navegador. */
+  protected readonly zonaHoraria = computed(() => {
+    const zona = this.configuracion.zonaHoraria();
+    return esZonaValida(zona) ? zona : zonaNavegador();
+  });
+
+  /** Fecha mínima seleccionable (mañana en la zona del servidor, en formato `yyyy-MM-dd`). */
+  protected readonly manana = computed(() => diaSiguienteIso(fechaIsoEnZona(this.reloj(), this.zonaHoraria())));
+
+  /** Fecha mínima en formato `dd/MM/yyyy`, para el texto de ayuda. */
+  protected readonly mananaLegible = computed(() => fechaLegible(this.manana()));
 
   /** Formulario de la reserva. */
   protected readonly form = this.fb.group(
     {
       salaId: this.fb.control<number | undefined>(undefined, Validators.required),
-      fecha: this.fb.control('', [Validators.required, aPartirDeMananaValidator(this.ahora)]),
+      fecha: this.fb.control('', [Validators.required, aPartirDeMananaValidator(this.ahora, () => this.zonaHoraria())]),
       horaInicio: this.fb.control('', Validators.required),
       horaFin: this.fb.control('', Validators.required),
       motivo: this.fb.control('', [Validators.required, Validators.maxLength(255)]),
@@ -68,6 +95,18 @@ export class ReservaFormComponent {
   );
 
   constructor() {
+    this.configuracion
+      .obtenerZonaHoraria(true)
+      .pipe(takeUntilDestroyed())
+      .subscribe({ error: () => undefined });
+    interval(60_000)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.reloj.set(this.ahora()));
+    // `manana` solo cambia (y solo entonces se revalida la fecha) cuando cambia el día o la zona.
+    effect(() => {
+      this.manana();
+      untracked(() => this.form.controls.fecha.updateValueAndValidity());
+    });
     this.salasService
       .listar()
       .pipe(takeUntilDestroyed())
