@@ -68,7 +68,7 @@
   } @else {
     <div class="tabla-desplazable" role="region" aria-labelledby="caption-reservas" tabindex="0">
       <table>
-        <caption id="caption-reservas" class="visualmente-oculto">Listado de reservas</caption>
+        <caption id="caption-reservas" #captionRef class="visualmente-oculto" tabindex="-1">Listado de reservas</caption>
         <thead>
           <tr>
             <th scope="col">Sala</th>
@@ -119,6 +119,57 @@
       </table>
     </div>
   }
+
+  <div class="paginacion">
+    @if (totalPaginas() > 1 && !error()) {
+      <nav aria-label="Paginación de reservas" class="paginacion-controles">
+        <button type="button" class="boton-secundario" [disabled]="esPrimeraPagina()" (click)="irAPagina(0)">
+          Primera
+        </button>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="esPrimeraPagina()"
+          (click)="irAPagina(paginaActual() - 1)"
+        >
+          Anterior
+        </button>
+        <div class="paginacion-selector">
+          <label for="paginacion-pagina">Página</label>
+          <select id="paginacion-pagina" #selectorPagina>
+            @for (indice of indicesPagina(); track indice) {
+              <option [value]="indice" [selected]="indice === paginaActual()">{{ indice + 1 }}</option>
+            }
+          </select>
+          <button
+            type="button"
+            class="boton-secundario"
+            aria-label="Ir a la página seleccionada"
+            (click)="irAPagina(+selectorPagina.value)"
+          >
+            Ir
+          </button>
+        </div>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="esUltimaPagina()"
+          (click)="irAPagina(paginaActual() + 1)"
+        >
+          Siguiente
+        </button>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="esUltimaPagina()"
+          (click)="irAPagina(totalPaginas() - 1)"
+        >
+          Última
+        </button>
+      </nav>
+    }
+    <p class="paginacion-estado" aria-live="polite">{{ textoPaginacion() }}</p>
+  </div>
 
   <app-dialogo-confirmacion
     titulo="Cancelar reserva"

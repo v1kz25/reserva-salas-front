@@ -22,12 +22,23 @@ describe('servicios HTTP', () => {
     req.flush([]);
   });
 
-  it('ReservasService.listar sin filtros no envía parámetros', () => {
+  it('ReservasService.listar sin filtros solo envía la página 0 y el tamaño por defecto', () => {
     TestBed.inject(ReservasService).listar().subscribe();
     const req = http.expectOne((r) => r.url === '/api/reservas');
     expect(req.request.method).toBe('GET');
-    expect(req.request.params.keys()).toEqual([]);
-    req.flush([]);
+    expect(req.request.params.keys()).toEqual(['page', 'size']);
+    expect(req.request.params.get('page')).toBe('0');
+    expect(req.request.params.get('size')).toBe('20');
+    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
+  });
+
+  it('ReservasService.listar envía la página y el tamaño indicados junto a los filtros', () => {
+    TestBed.inject(ReservasService).listar({ salaId: 2 }, 4, 50).subscribe();
+    const req = http.expectOne((r) => r.url === '/api/reservas');
+    expect(req.request.params.get('page')).toBe('4');
+    expect(req.request.params.get('size')).toBe('50');
+    expect(req.request.params.get('salaId')).toBe('2');
+    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 4, size: 50 });
   });
 
   it('ReservasService.listar envía salaId, fechaDesde y fechaHasta', () => {
@@ -36,7 +47,7 @@ describe('servicios HTTP', () => {
     expect(req.request.params.get('salaId')).toBe('3');
     expect(req.request.params.get('fechaDesde')).toBe('2026-10-05');
     expect(req.request.params.get('fechaHasta')).toBe('2026-10-07');
-    req.flush([]);
+    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
   });
 
   it('ReservasService.listar admite salaId 0 sin descartarlo y omite fechas vacías', () => {
@@ -45,7 +56,7 @@ describe('servicios HTTP', () => {
     expect(req.request.params.get('salaId')).toBe('0');
     expect(req.request.params.has('fechaDesde')).toBeFalse();
     expect(req.request.params.has('fechaHasta')).toBeFalse();
-    req.flush([]);
+    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
   });
 
   it('ReservasService.crear hace POST /api/reservas con el cuerpo', () => {

@@ -37,3 +37,22 @@ export interface FiltroReservas {
   /** Solo las reservas de este día o anteriores (`yyyy-MM-dd`, inclusive). */
   fechaHasta?: string;
 }
+
+/** Tamaño de página por defecto del listado de reservas (el máximo que admite la API es 100). */
+export const TAMANO_PAGINA_RESERVAS = 20;
+
+/**
+ * Página de reservas que devuelve `GET /api/reservas` (`PaginaReservas` del contrato).
+ */
+export interface PaginaReservas {
+  /** Reservas de esta página, ordenadas por fecha y hora de inicio. */
+  content: Reserva[];
+  /** Número total de reservas que cumplen los filtros. */
+  totalElements: number;
+  /** Número total de páginas. */
+  totalPages: number;
+  /** Página actual, empezando en 0. */
+  number: number;
+  /** Tamaño de página solicitado. */
+  size: number;
+}

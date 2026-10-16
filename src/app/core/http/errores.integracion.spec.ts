@@ -139,7 +139,7 @@ describe('gestión de errores (router real + componentes)', () => {
     it('error de salas 503 también redirige y no muestra el aviso de salas', async () => {
       await abrirListado();
       http.expectOne('/api/salas').flush(null, { status: 503, statusText: 'x' });
-      reservas().forEach((r) => r.flush([]));
+      reservas().forEach((r) => r.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }));
       await reposo();
       expect(location.path().split('?')[0]).toBe('/error/no-disponible');
       expect(el().textContent).not.toContain('No se han podido cargar las salas');

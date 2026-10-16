@@ -10,6 +10,18 @@ const SALAS = [
   { id: 1, nombre: 'Sala Norte', capacidad: 10, planta: 1 },
   { id: 2, nombre: 'Sala Sur', capacidad: 4, planta: -1 },
 ];
+
+/** Respuesta paginada de `GET /api/reservas` con las reservas indicadas en una sola página. */
+const pagina = (content: unknown[], number = 0, totalPages = content.length > 0 ? 1 : 0, totalElements = content.length) => ({
+  content,
+  totalElements,
+  totalPages,
+  number,
+  size: 20,
+});
+
+/** Parámetros de la petición sin los de paginación (`page` y `size`). */
+const clavesFiltro = (req: TestRequest) => req.request.params.keys().filter((k) => k !== 'page' && k !== 'size');
 const RESERVAS = [
   { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' },
 ];
@@ -41,7 +53,7 @@ describe('ReservaListComponent', () => {
 
   function cargar(reservas: unknown[] = RESERVAS, salas: unknown[] = SALAS): void {
     http.expectOne('/api/salas').flush(salas);
-    http.expectOne((r) => r.url === '/api/reservas').flush(reservas);
+    http.expectOne((r) => r.url === '/api/reservas').flush(pagina(reservas));
     fixture.detectChanges();
   }
 
@@ -63,7 +75,7 @@ describe('ReservaListComponent', () => {
   it('muestra "Cargando" mientras espera', () => {
     expect(el.textContent).toContain('Cargando reservas');
     http.expectOne('/api/salas').flush([]);
-    http.expectOne((r) => r.url === '/api/reservas').flush([]);
+    http.expectOne((r) => r.url === '/api/reservas').flush(pagina([]));
   });
 
   it('muestra el nombre de la sala, no su id, y las horas en HH:mm', () => {
@@ -97,7 +109,7 @@ describe('ReservaListComponent', () => {
 
   it('avisa si fallan las salas pero sigue listando', () => {
     http.expectOne('/api/salas').flush({ title: 'x', status: 500, detail: 'Fallo salas' }, { status: 500, statusText: 'e' });
-    http.expectOne((r) => r.url === '/api/reservas').flush(RESERVAS);
+    http.expectOne((r) => r.url === '/api/reservas').flush(pagina(RESERVAS));
     fixture.detectChanges();
     expect(el.querySelector('.aviso')?.textContent).toContain('Fallo salas');
     expect(el.querySelector('tbody tr')).not.toBeNull();
@@ -112,8 +124,8 @@ describe('ReservaListComponent', () => {
   it('la petición inicial no lleva filtros', () => {
     http.expectOne('/api/salas').flush(SALAS);
     const req = http.expectOne((r) => r.url === '/api/reservas');
-    expect(req.request.params.keys()).toEqual([]);
-    req.flush([]);
+    expect(clavesFiltro(req)).toEqual([]);
+    req.flush(pagina([]));
   });
 
   it('filtrar por sala y rango de fechas recarga con los parámetros', () => {
@@ -122,20 +134,20 @@ describe('ReservaListComponent', () => {
     elegirOpcion(select, 'Sala Sur');
     let req = ultimaReservas();
     expect(req.request.params.get('salaId')).toBe('2');
-    req.flush([]);
+    req.flush(pagina([]));
 
     cambiarFecha('2026-10-05');
     req = ultimaReservas();
     expect(req.request.params.get('salaId')).toBe('2');
     expect(req.request.params.get('fechaDesde')).toBe('2026-10-05');
     expect(req.request.params.has('fechaHasta')).toBeFalse();
-    req.flush([]);
+    req.flush(pagina([]));
 
     cambiarFecha('2026-10-05', 'filtro-fecha-hasta');
     req = ultimaReservas();
     expect(req.request.params.get('fechaDesde')).toBe('2026-10-05');
     expect(req.request.params.get('fechaHasta')).toBe('2026-10-05');
-    req.flush(RESERVAS);
+    req.flush(pagina(RESERVAS));
     fixture.detectChanges();
     expect(el.querySelectorAll('tbody tr').length).toBe(1);
   });
@@ -143,11 +155,11 @@ describe('ReservaListComponent', () => {
   it('limpiar filtros vuelve a pedir sin parámetros', () => {
     cargar();
     cambiarFecha('2026-10-05');
-    ultimaReservas().flush([]);
+    ultimaReservas().flush(pagina([]));
     (el.querySelector('button') as HTMLButtonElement).click();
     const req = ultimaReservas();
-    expect(req.request.params.keys()).toEqual([]);
-    req.flush(RESERVAS);
+    expect(clavesFiltro(req)).toEqual([]);
+    req.flush(pagina(RESERVAS));
   });
 
   it('el botón "Nueva reserva" enlaza a /reservas/nueva', () => {
@@ -165,7 +177,7 @@ describe('ReservaListComponent', () => {
     expect(reqs[0].cancelled).toBeTrue();
     expect(reqs[1].cancelled).toBeFalse();
     expect(reqs[1].request.params.get('fechaDesde')).toBe('2026-10-06');
-    reqs[1].flush(RESERVAS);
+    reqs[1].flush(pagina(RESERVAS));
     fixture.detectChanges();
     expect(el.querySelectorAll('tbody tr').length).toBe(1);
     expect(el.textContent).toContain('Ana');
@@ -179,14 +191,14 @@ describe('ReservaListComponent', () => {
     cambiarFecha('2026-10-05');
     fixture.detectChanges();
     expect(el.querySelector('p.error')).toBeNull();
-    ultimaReservas().flush(RESERVAS);
+    ultimaReservas().flush(pagina(RESERVAS));
     fixture.detectChanges();
     expect(el.querySelector('p.error')).toBeNull();
     expect(el.querySelectorAll('tbody tr').length).toBe(1);
   });
 
   it('muestra «—» mientras las salas no responden y el nombre después', () => {
-    http.expectOne((r) => r.url === '/api/reservas').flush(RESERVAS);
+    http.expectOne((r) => r.url === '/api/reservas').flush(pagina(RESERVAS));
     fixture.detectChanges();
     expect(el.querySelector('tbody td')?.textContent?.trim()).toBe('—');
     http.expectOne('/api/salas').flush(SALAS);
@@ -207,7 +219,7 @@ describe('ReservaListComponent', () => {
     it('«Todas las salas» vuelve a estar seleccionada en el DOM tras «Limpiar filtros»', () => {
       cargar();
       elegirOpcion(selectSala(), 'Sala Sur');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       fixture.detectChanges();
       expect(textoSeleccionado()).toBe('Sala Sur');
 
@@ -216,77 +228,77 @@ describe('ReservaListComponent', () => {
       expect(selectSala().selectedIndex).toBe(0);
       expect(textoSeleccionado()).toBe('Todas las salas');
       const req = ultimaReservas();
-      expect(req.request.params.keys()).toEqual([]);
-      req.flush([]);
+      expect(clavesFiltro(req)).toEqual([]);
+      req.flush(pagina([]));
     });
 
     it('«Limpiar filtros» vacía también las fechas en el DOM', () => {
       cargar();
       cambiarFecha('2026-10-05');
       cambiarFecha('2026-10-07', 'filtro-fecha-hasta');
-      reservasReqs().forEach((r) => !r.cancelled && r.flush([]));
+      reservasReqs().forEach((r) => !r.cancelled && r.flush(pagina([])));
       (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Limpiar')) as HTMLButtonElement).click();
       fixture.detectChanges();
       expect((el.querySelector('#filtro-fecha-desde') as HTMLInputElement).value).toBe('');
       expect((el.querySelector('#filtro-fecha-hasta') as HTMLInputElement).value).toBe('');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
     });
 
     it('elegir de nuevo «Todas las salas» quita salaId de la petición', () => {
       cargar();
       elegirOpcion(selectSala(), 'Sala Norte');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       elegirOpcion(selectSala(), 'Todas las salas');
       const req = ultimaReservas();
       expect(req.request.params.has('salaId')).toBeFalse();
-      req.flush([]);
+      req.flush(pagina([]));
     });
 
     it('solo fechaHasta: envía únicamente fechaHasta', () => {
       cargar();
       cambiarFecha('2026-10-09', 'filtro-fecha-hasta');
       const req = ultimaReservas();
-      expect(req.request.params.keys()).toEqual(['fechaHasta']);
+      expect(clavesFiltro(req)).toEqual(['fechaHasta']);
       expect(req.request.params.get('fechaHasta')).toBe('2026-10-09');
-      req.flush([]);
+      req.flush(pagina([]));
     });
 
     it('solo fechaDesde: envía únicamente fechaDesde', () => {
       cargar();
       cambiarFecha('2026-10-05');
       const req = ultimaReservas();
-      expect(req.request.params.keys()).toEqual(['fechaDesde']);
-      req.flush([]);
+      expect(clavesFiltro(req)).toEqual(['fechaDesde']);
+      req.flush(pagina([]));
     });
 
     it('sala + desde + hasta: envía los tres parámetros', () => {
       cargar();
       elegirOpcion(selectSala(), 'Sala Norte');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('2026-10-05');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('2026-10-07', 'filtro-fecha-hasta');
       const req = ultimaReservas();
       expect(req.request.params.get('salaId')).toBe('1');
       expect(req.request.params.get('fechaDesde')).toBe('2026-10-05');
       expect(req.request.params.get('fechaHasta')).toBe('2026-10-07');
-      req.flush([]);
+      req.flush(pagina([]));
     });
 
     it('vaciar una fecha la quita de la petición', () => {
       cargar();
       cambiarFecha('2026-10-05');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('');
       const req = ultimaReservas();
       expect(req.request.params.has('fechaDesde')).toBeFalse();
-      req.flush([]);
+      req.flush(pagina([]));
     });
 
     it('rango invertido: no lanza petición y muestra el error', () => {
       cargar();
       cambiarFecha('2026-10-10');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('2026-10-05', 'filtro-fecha-hasta');
       fixture.detectChanges();
       expect(reservasReqs().length).toBe(0);
@@ -310,7 +322,7 @@ describe('ReservaListComponent', () => {
     it('al corregir el rango invertido se lanza la petición y desaparece el error', () => {
       cargar();
       cambiarFecha('2026-10-10');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('2026-10-05', 'filtro-fecha-hasta');
       expect(reservasReqs().length).toBe(0);
       cambiarFecha('2026-10-12', 'filtro-fecha-hasta');
@@ -318,7 +330,7 @@ describe('ReservaListComponent', () => {
       const req = ultimaReservas();
       expect(req.request.params.get('fechaDesde')).toBe('2026-10-10');
       expect(req.request.params.get('fechaHasta')).toBe('2026-10-12');
-      req.flush([]);
+      req.flush(pagina([]));
       fixture.detectChanges();
       expect(el.querySelector('#filtro-fechas-error .error')).toBeNull();
     });
@@ -326,7 +338,7 @@ describe('ReservaListComponent', () => {
     it('rango con fechas iguales sí lanza la petición', () => {
       cargar();
       cambiarFecha('2026-10-05');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('2026-10-05', 'filtro-fecha-hasta');
       expect(ultimaReservas()).toBeDefined();
       http.match((r) => r.url === '/api/reservas');
@@ -335,12 +347,12 @@ describe('ReservaListComponent', () => {
     it('rango inválido y «Limpiar filtros»: vuelve a pedir sin parámetros', () => {
       cargar();
       cambiarFecha('2026-10-10');
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       cambiarFecha('2026-10-05', 'filtro-fecha-hasta');
       (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Limpiar')) as HTMLButtonElement).click();
       const req = ultimaReservas();
-      expect(req.request.params.keys()).toEqual([]);
-      req.flush([]);
+      expect(clavesFiltro(req)).toEqual([]);
+      req.flush(pagina([]));
     });
 
     it('el min de «Fecha hasta» es la fecha desde y se actualiza', () => {
@@ -398,7 +410,7 @@ describe('ReservaListComponent', () => {
     it('confirmar envía DELETE /api/reservas/{id}, quita la fila y recarga respetando los filtros', async () => {
       cargar([...RESERVAS, OTRA]);
       elegirOpcion(el.querySelector('#filtro-sala') as HTMLSelectElement, 'Sala Sur');
-      ultimaReservas().flush([...RESERVAS, OTRA]);
+      ultimaReservas().flush(pagina([...RESERVAS, OTRA]));
       fixture.detectChanges();
       await abrir(0);
       botonDialogo('Sí, cancelar').click();
@@ -413,7 +425,7 @@ describe('ReservaListComponent', () => {
       expect(recarga.request.method).toBe('GET');
       expect(recarga.request.params.get('salaId')).toBe('2');
       expect(el.textContent).not.toContain('Cargando reservas');
-      recarga.flush([OTRA]);
+      recarga.flush(pagina([OTRA]));
       fixture.detectChanges();
       expect(filas()).toBe(1);
       expect(el.textContent).toContain('Luis');
@@ -425,7 +437,7 @@ describe('ReservaListComponent', () => {
       await abrir();
       botonDialogo('Sí, cancelar').click();
       http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       fixture.detectChanges();
       expect(el.textContent).toContain('No hay reservas');
     });
@@ -464,7 +476,7 @@ describe('ReservaListComponent', () => {
       const reqs = http.match((r) => r.method === 'DELETE');
       expect(reqs.length).toBe(1);
       reqs[0].flush(null, { status: 204, statusText: 'No Content' });
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
     });
 
     it('mientras se cancela no se puede cambiar la reserva seleccionada', async () => {
@@ -483,7 +495,7 @@ describe('ReservaListComponent', () => {
       const reqs = deletes();
       expect(reqs.length).toBe(1);
       reqs[0].flush(null, { status: 204, statusText: 'No Content' });
-      ultimaReservas().flush([OTRA]);
+      ultimaReservas().flush(pagina([OTRA]));
     });
 
     it('404: mensaje claro, quita la fila y refresca el listado', async () => {
@@ -495,7 +507,7 @@ describe('ReservaListComponent', () => {
       expect(el.querySelector('.error-general')?.textContent).toContain('La reserva ya no existe');
       expect(el.querySelector('.exito')).toBeNull();
       expect(filas()).toBe(1);
-      ultimaReservas().flush([OTRA]);
+      ultimaReservas().flush(pagina([OTRA]));
       fixture.detectChanges();
       expect(dialogo().open).toBeFalse();
     });
@@ -525,7 +537,7 @@ describe('ReservaListComponent', () => {
       botonDialogo('Sí, cancelar').click();
       const req = http.expectOne((r) => r.method === 'DELETE');
       req.flush(null, { status: 204, statusText: 'No Content' });
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       fixture.detectChanges();
       expect(el.querySelector('.error-general')).toBeNull();
     });
@@ -535,7 +547,7 @@ describe('ReservaListComponent', () => {
       await abrir(0);
       botonDialogo('Sí, cancelar').click();
       http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
-      ultimaReservas().flush([OTRA]);
+      ultimaReservas().flush(pagina([OTRA]));
       fixture.detectChanges();
       expect(el.querySelector('.exito')).not.toBeNull();
       await abrir(0);
@@ -549,7 +561,7 @@ describe('ReservaListComponent', () => {
       http.expectOne((r) => r.method === 'DELETE').flush(null, { status: 204, statusText: 'No Content' });
       fixture.detectChanges();
       await fixture.whenStable();
-      ultimaReservas().flush([]);
+      ultimaReservas().flush(pagina([]));
       fixture.detectChanges();
       await fixture.whenStable();
       await new Promise((r) => requestAnimationFrame(() => setTimeout(r)));
@@ -596,7 +608,7 @@ describe('ReservaListComponent con aviso de navegación', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     http.expectOne('/api/salas').flush([]);
-    http.expectOne((r) => r.url === '/api/reservas').flush([]);
+    http.expectOne((r) => r.url === '/api/reservas').flush(pagina([]));
     fixture.detectChanges();
     await fixture.whenStable();
 

@@ -15,6 +15,15 @@ const AJENA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', hor
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 const ADMIN: Usuario = { id: 9, email: 'admin@example.com', nombre: 'Admin', rol: 'ADMIN' };
 
+/** Respuesta paginada de `GET /api/reservas` con las reservas indicadas en una sola página. */
+const pagina = (content: unknown[], number = 0, totalPages = content.length > 0 ? 1 : 0, totalElements = content.length) => ({
+  content,
+  totalElements,
+  totalPages,
+  number,
+  size: 20,
+});
+
 describe('ReservaListComponent: permisos de cancelación', () => {
   let fixture: ComponentFixture<ReservaListComponent>;
   let http: HttpTestingController;
@@ -37,7 +46,7 @@ describe('ReservaListComponent: permisos de cancelación', () => {
     document.body.appendChild(el);
     fixture.detectChanges();
     http.expectOne('/api/salas').flush(SALAS);
-    http.expectOne((r) => r.url === '/api/reservas').flush(reservas);
+    http.expectOne((r) => r.url === '/api/reservas').flush(pagina(reservas));
     fixture.detectChanges();
   }
 
@@ -96,7 +105,7 @@ describe('ReservaListComponent: permisos de cancelación', () => {
     const req = http.expectOne((r) => r.method === 'DELETE');
     expect(req.request.url).toBe('/api/reservas/11');
     req.flush(null, { status: 204, statusText: 'No Content' });
-    http.expectOne((r) => r.method === 'GET' && r.url === '/api/reservas').flush([PROPIA]);
+    http.expectOne((r) => r.method === 'GET' && r.url === '/api/reservas').flush(pagina([PROPIA]));
   });
 
   it('403 al cancelar: muestra el mensaje en pantalla, cierra el diálogo y conserva la fila', async () => {
