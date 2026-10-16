@@ -10,9 +10,11 @@
   }
 }
 
+/* Contraste 7,7:1 (#4a4d52 sobre #f3f4f6). `opacity: 1` anula la opacidad que algunos navegadores aplican a los controles deshabilitados. */
 select:disabled,
 input:disabled {
   color: #4a4d52;
   background: #f3f4f6;
+  opacity: 1;
   cursor: not-allowed;
 }

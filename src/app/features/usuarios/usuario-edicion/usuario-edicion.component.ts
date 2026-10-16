@@ -6,8 +6,10 @@ import {
   Injector,
   afterNextRender,
   computed,
+  effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,7 +24,7 @@ import { SesionService } from '../../../core/services/sesion.service';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { CLAVE_AVISO } from '../../../shared/utils/aviso-navegacion';
 import { focoPerdido } from '../../../shared/utils/foco';
-import { textoNoEnBlancoValidator } from '../../salas/sala-form/sala-form.validators';
+import { textoNoEnBlancoValidator } from '../../../shared/validators/texto.validators';
 import { CambioPasswordComponent } from '../cambio-password/cambio-password.component';
 import {
   MENSAJE_CAMBIO_PROPIO_RECHAZADO,
@@ -31,6 +33,7 @@ import {
   NOMBRE_ROL,
   RUTA_USUARIOS_ADMIN,
   avisoUsuarioModificado,
+  etiquetaCampo,
   formatearFechaAlta,
 } from '../usuario-mensajes';
 import { MAX_NOMBRE_USUARIO } from '../usuario-validators';
@@ -114,6 +117,9 @@ export class UsuarioEdicionComponent {
   /** Longitud máxima del nombre, para el atributo `maxlength`. */
   protected readonly maxNombre = MAX_NOMBRE_USUARIO;
 
+  /** Etiqueta legible de un campo de la API, para los errores sin campo en el formulario. */
+  protected readonly etiqueta = etiquetaCampo;
+
   /** Explicaciones de los controles bloqueados para el propio administrador. */
   protected readonly mensajesPropio = { rol: MENSAJE_NO_QUITARSE_ADMIN, activo: MENSAJE_NO_DESACTIVARSE } as const;
 
@@ -129,6 +135,21 @@ export class UsuarioEdicionComponent {
   });
 
   constructor() {
+    // El rol y el estado se bloquean mientras el usuario editado sea el administrador en
+    // sesión, y se desbloquean si deja de serlo (otro usuario en la ruta, cambio de sesión…).
+    effect(() => {
+      const propio = this.propio();
+      untracked(() => {
+        for (const control of [this.form.controls.rol, this.form.controls.activo]) {
+          if (propio) {
+            control.disable({ emitEvent: false });
+          } else {
+            control.enable({ emitEvent: false });
+          }
+        }
+      });
+    });
+
     this.route.paramMap
       .pipe(
         map((params) => params.get('id')),
@@ -213,10 +234,6 @@ export class UsuarioEdicionComponent {
       tap((usuario) => {
         this.usuario.set(usuario);
         this.form.reset({ nombre: usuario.nombre, rol: usuario.rol, activo: usuario.activo });
-        if (this.propio()) {
-          this.form.controls.rol.disable();
-          this.form.controls.activo.disable();
-        }
         this.cargando.set(false);
       }),
       catchError((err: unknown) => {
@@ -240,7 +257,6 @@ export class UsuarioEdicionComponent {
     this.enviando.set(false);
     this.errorGeneral.set(undefined);
     this.erroresSinCampo.set([]);
-    this.form.enable();
     this.form.reset();
   }
 

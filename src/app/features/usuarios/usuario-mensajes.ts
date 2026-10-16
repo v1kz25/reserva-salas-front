@@ -9,6 +9,25 @@ export const NOMBRE_ROL: Readonly<Record<Rol, string>> = {
   ADMIN: 'Administrador',
 };
 
+/** Texto visible de los campos de la API, para los errores del servidor sin campo en el formulario. */
+const ETIQUETA_CAMPO: Readonly<Record<string, string>> = {
+  email: 'Email',
+  nombre: 'Nombre',
+  password: 'Contraseña',
+  rol: 'Rol',
+  activo: 'Estado',
+};
+
+/**
+ * Etiqueta legible de un campo de la API (por ejemplo, `password` → «Contraseña»). Si el
+ * campo no es conocido, devuelve su nombre sin cambios.
+ *
+ * @param campo Nombre del campo en la petición.
+ */
+export function etiquetaCampo(campo: string): string {
+  return Object.hasOwn(ETIQUETA_CAMPO, campo) ? ETIQUETA_CAMPO[campo] : campo;
+}
+
 /** Formato de la fecha de alta en el listado (por ejemplo, «15 oct 2026»). */
 const FORMATO_FECHA_ALTA = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' });
 

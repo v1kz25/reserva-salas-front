@@ -162,7 +162,9 @@ describe('SalaFormComponent', () => {
     it('capacidad 1 es válida', () => {
       rellenar('S', '1', '1');
       pulsarGuardar();
-      http.expectOne('/api/salas').flush({ id: 1, nombre: 'S', capacidad: 1, planta: 1 });
+      const req = http.expectOne('/api/salas');
+      expect(req.request.body).toEqual({ nombre: 'S', capacidad: 1, planta: 1 });
+      req.flush({ id: 1, nombre: 'S', capacidad: 1, planta: 1 });
     });
 
     it('capacidad decimal no se acepta', () => {

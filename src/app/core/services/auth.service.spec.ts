@@ -75,8 +75,11 @@ describe('AuthService', () => {
     it('terminada la comprobación, una llamada posterior lanza otra petición /me', () => {
       restaurar();
       http.expectOne('/api/auth/me').flush(ANA);
-      restaurar();
-      http.expectOne('/api/auth/me').flush(ANA);
+      const segunda = restaurar();
+      const req = http.expectOne('/api/auth/me');
+      expect(req.request.method).toBe('GET');
+      req.flush(ANA);
+      expect(segunda.estado).toBe('autenticado');
     });
 
     it('tras un fallo de red la siguiente llamada vuelve a preguntar al servidor', () => {

@@ -189,9 +189,10 @@ export class UsuarioListComponent {
   }
 
   /**
-   * Envía la activación o desactivación confirmada (`PUT /api/usuarios/{id}` con el resto de
-   * datos sin cambios). Si va bien, actualiza la fila y recarga el listado; si el servidor
-   * lo rechaza (`409`, desactivarse a sí mismo) o el usuario ya no existe (`404`), lo indica
+   * Envía la activación o desactivación confirmada: lee el usuario (`GET /api/usuarios/{id}`)
+   * y envía `PUT /api/usuarios/{id}` con su nombre y rol actuales. Si va bien, actualiza la fila y recarga el listado; si el servidor
+   * lo rechaza (`409`, desactivarse a sí mismo) o el usuario ya no existe (`404` en la
+   * lectura o en el cambio), lo indica
    * y recarga el listado. Mientras hay un cambio en curso se ignoran nuevas confirmaciones.
    */
   confirmarCambioEstado(): void {
@@ -200,9 +201,14 @@ export class UsuarioListComponent {
       return;
     }
     this.cambiando.set(true);
+    const activo = !usuario.activo;
+    // Se leen el nombre y el rol actuales para no sobrescribir los cambios de otro administrador.
     this.usuariosService
-      .modificar(usuario.id, { nombre: usuario.nombre, rol: usuario.rol, activo: !usuario.activo })
+      .obtener(usuario.id)
       .pipe(
+        switchMap((actual) =>
+          this.usuariosService.modificar(actual.id, { nombre: actual.nombre, rol: actual.rol, activo }),
+        ),
         finalize(() => this.cambiando.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )

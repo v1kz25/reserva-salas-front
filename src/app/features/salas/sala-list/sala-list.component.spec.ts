@@ -271,7 +271,7 @@ describe('SalaListComponent', () => {
       botonEliminar('Sala Sur').click();
       http.expectOne('/api/salas/1').flush(null, sinContenido);
       http.expectOne('/api/salas').flush([SALAS[1]]);
-      http.expectNone('/api/salas/2');
+      expect(http.match('/api/salas/2').length).toBe(0);
     });
 
     it('error de servidor (500) al eliminar muestra el mensaje y mantiene la fila', async () => {

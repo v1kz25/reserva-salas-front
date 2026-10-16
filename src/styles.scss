@@ -214,8 +214,12 @@ button,
   border: 1px solid var(--color-error);
 }
 
+/* Estado deshabilitado con colores explícitos (texto #4a4d52 sobre #f3f4f6: 7,7:1) en lugar de opacidad,
+   que podía dejar el texto por debajo de 4,5:1. Va después de los botones para prevalecer sobre ellos. */
 [aria-disabled='true'] {
-  opacity: 0.6;
+  color: #4a4d52;
+  background: #f3f4f6;
+  border-color: #6b6e75;
   cursor: not-allowed;
 }
 

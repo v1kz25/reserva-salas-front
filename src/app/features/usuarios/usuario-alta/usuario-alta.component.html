@@ -14,7 +14,7 @@
       @if (erroresSinCampo().length > 0) {
         <ul>
           @for (error of erroresSinCampo(); track error.campo) {
-            <li>{{ error.campo }}: {{ error.mensaje }}</li>
+            <li>{{ etiqueta(error.campo) }}: {{ error.mensaje }}</li>
           }
         </ul>
       }

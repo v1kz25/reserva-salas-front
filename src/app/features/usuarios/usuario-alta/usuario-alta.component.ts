@@ -18,13 +18,14 @@ import { ErrorCampo, ProblemDetail } from '../../../core/models/problem-detail.m
 import { Rol, UsuarioNuevoRequest } from '../../../core/models/usuario.model';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import { CLAVE_AVISO } from '../../../shared/utils/aviso-navegacion';
-import { textoNoEnBlancoValidator } from '../../salas/sala-form/sala-form.validators';
+import { textoNoEnBlancoValidator } from '../../../shared/validators/texto.validators';
 import {
   MENSAJE_EMAIL_REPETIDO,
   MENSAJE_PASSWORD_LARGA,
   NOMBRE_ROL,
   RUTA_USUARIOS_ADMIN,
   avisoUsuarioCreado,
+  etiquetaCampo,
 } from '../usuario-mensajes';
 import {
   MAX_EMAIL,
@@ -85,6 +86,9 @@ export class UsuarioAltaComponent {
     passwordMin: MIN_PASSWORD,
     passwordMax: MAX_PASSWORD,
   } as const;
+
+  /** Etiqueta legible de un campo de la API, para los errores sin campo en el formulario. */
+  protected readonly etiqueta = etiquetaCampo;
 
   /** Mensaje si la contraseña supera el límite, para la plantilla. */
   protected readonly mensajePasswordLarga = MENSAJE_PASSWORD_LARGA;

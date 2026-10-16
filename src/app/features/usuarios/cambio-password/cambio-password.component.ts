@@ -15,12 +15,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { aProblemDetail } from '../../../core/http/problem-detail';
+import { ErrorCampo } from '../../../core/models/problem-detail.model';
 import { UsuariosService } from '../../../core/services/usuarios.service';
 import {
   AVISO_PASSWORD_CAMBIADA,
   MENSAJE_PASSWORD_LARGA,
   MENSAJE_PASSWORD_NO_COINCIDE,
   MENSAJE_USUARIO_NO_EXISTE,
+  etiquetaCampo,
 } from '../usuario-mensajes';
 import { MAX_PASSWORD, MIN_PASSWORD, coincidenciaValidator, passwordBytesValidator } from '../usuario-validators';
 
@@ -67,10 +69,16 @@ export class CambioPasswordComponent {
   /** Mensaje de error general devuelto por el servidor, si lo hay. */
   protected readonly errorGeneral = signal<string | undefined>(undefined);
 
+  /** Errores del servidor que no corresponden al campo de la contraseña. */
+  protected readonly erroresSinCampo = signal<ErrorCampo[]>([]);
+
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly usuariosService = inject(UsuariosService);
+
+  /** Etiqueta legible de un campo de la API, para los errores sin campo en el formulario. */
+  protected readonly etiqueta = etiquetaCampo;
 
   /** Límites del contrato, para la plantilla. */
   protected readonly limites = { min: MIN_PASSWORD, max: MAX_PASSWORD } as const;
@@ -127,6 +135,7 @@ export class CambioPasswordComponent {
     }
     this.aviso.set(undefined);
     this.errorGeneral.set(undefined);
+    this.erroresSinCampo.set([]);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.enfocarPrimerError();
@@ -146,16 +155,21 @@ export class CambioPasswordComponent {
           this.enviando.set(false);
           const problema = aProblemDetail(err);
           if (problema.status === 404) {
+            this.form.reset();
             this.errorGeneral.set(MENSAJE_USUARIO_NO_EXISTE);
             this.noEncontrado.emit();
             return;
           }
-          const errorPassword = problema.errores?.find((error) => error.campo === 'password');
+          const errores = problema.errores ?? [];
+          const errorPassword = errores.find((error) => error.campo === 'password');
+          const sinCampo = errores.filter((error) => error.campo !== 'password');
           if (errorPassword) {
             const control = this.form.controls.password;
             control.setErrors({ ...control.errors, servidor: errorPassword.mensaje });
             control.markAsTouched();
-          } else {
+          }
+          this.erroresSinCampo.set(sinCampo);
+          if (!errorPassword || sinCampo.length > 0) {
             this.errorGeneral.set(problema.detail ?? problema.title);
           }
           this.enfocarPrimerError();
