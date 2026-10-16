@@ -64,6 +64,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/salas/sala-form/sala-form.component').then((m) => m.SalaFormComponent),
   },
   {
+    path: 'admin/ajustes',
+    title: 'Ajustes',
+    canActivate: [sesionGuard, adminGuard],
+    loadComponent: () => import('./features/ajustes/ajustes.component').then((m) => m.AjustesComponent),
+  },
+  {
     path: 'error/no-disponible',
     pathMatch: 'full',
     title: 'Servicio no disponible',
