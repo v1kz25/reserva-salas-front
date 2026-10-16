@@ -352,3 +352,9 @@ table {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Reserva en la que el usuario no participa: el texto «Ocupada» la identifica (no solo el estilo). */
+.texto-ocupada {
+  font-style: italic;
+  color: #4a4d52;
+}

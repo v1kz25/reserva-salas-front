@@ -1,0 +1,47 @@
+.pestanas {
+  margin: 1rem 0 1.5rem;
+  border-bottom: 1px solid var(--color-borde);
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  a {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    color: var(--color-primario);
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: var(--radio-boton) var(--radio-boton) 0 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primario);
+      outline-offset: 2px;
+    }
+  }
+
+  /* La pestaña activa se distingue por el borde, el peso y el subrayado, no solo por el color. */
+  .activa {
+    margin-bottom: -1px;
+    font-weight: 600;
+    color: #1c1c1e;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    background: #fff;
+    border-color: var(--color-borde);
+  }
+}
+
+.contador {
+  font-weight: normal;
+}

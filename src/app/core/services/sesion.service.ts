@@ -84,12 +84,24 @@ export class SesionService {
   }
 
   /**
-   * Indica si el usuario puede gestionar un recurso: si es suyo o si es administrador.
+   * Indica si el usuario puede gestionar un recurso: si es suyo o si es administrador. Si no
+   * se conoce el propietario (por ejemplo, una reserva vista como «Ocupada»), devuelve `false`.
    *
    * @param usuarioId Usuario propietario del recurso.
    */
-  puedeGestionar(usuarioId: number): boolean {
+  puedeGestionar(usuarioId?: number): boolean {
     const usuario = this._usuario();
-    return usuario !== undefined && (usuario.rol === 'ADMIN' || usuario.id === usuarioId);
+    return (
+      usuario !== undefined && usuarioId !== undefined && (usuario.rol === 'ADMIN' || usuario.id === usuarioId)
+    );
+  }
+
+  /**
+   * Indica si el usuario en sesión es el indicado (por ejemplo, el organizador de una reserva).
+   *
+   * @param usuarioId Usuario con el que se compara.
+   */
+  esUsuario(usuarioId?: number): boolean {
+    return usuarioId !== undefined && this._usuario()?.id === usuarioId;
   }
 }

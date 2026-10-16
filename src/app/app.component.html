@@ -3,6 +3,13 @@
 
   @if (sesion.autenticado()) {
     <nav class="navegacion" aria-label="Principal">
+      <a routerLink="/mis-reservas" routerLinkActive="activo" ariaCurrentWhenActive="page">
+        Mis reservas
+        @if (invitacionesPendientes() > 0) {
+          <span class="insignia" aria-hidden="true">{{ invitacionesPendientes() }}</span>
+          <span class="visualmente-oculto">{{ textoInvitaciones() }}</span>
+        }
+      </a>
       <a routerLink="/amigos" routerLinkActive="activo" ariaCurrentWhenActive="page">
         Amigos
         @if (pendientes() > 0) {

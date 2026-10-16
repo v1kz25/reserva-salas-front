@@ -1,0 +1,115 @@
+<section aria-labelledby="titulo-mis-reservas">
+  <header class="cabecera">
+    <h1 id="titulo-mis-reservas">Mis reservas</h1>
+    <a routerLink="/reservas/nueva" class="boton">Nueva reserva</a>
+  </header>
+
+  <nav class="pestanas" aria-label="Secciones de Mis reservas">
+    <ul>
+      @for (pestana of pestanas; track pestana.id) {
+        <li>
+          <a
+            [routerLink]="[]"
+            [queryParams]="queryParamsDe(pestana.id)"
+            [class.activa]="vista() === pestana.id"
+            [attr.aria-current]="vista() === pestana.id ? 'page' : null"
+          >
+            {{ pestana.texto }}
+            @if (totales()[pestana.id] !== undefined) {
+              <span class="contador">({{ totales()[pestana.id] }})</span>
+            }
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  @if (errorRecarga()) {
+    <p class="aviso" role="alert">{{ errorRecarga() }}</p>
+  }
+
+  @if (vista() !== 'pendientes') {
+    <h2 id="titulo-vista">{{ vista() === 'organizadas' ? 'Reservas que organizas' : 'Reservas a las que asistes' }}</h2>
+  }
+
+  @if (cargando()) {
+    <p aria-live="polite">Cargando reservas…</p>
+  } @else if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  } @else if (vista() === 'pendientes') {
+    <app-invitaciones-pendientes [salas]="salas()" [datos]="invitacionesPagina()" (respondida)="recargarSinAviso()" />
+  } @else if (reservasPagina().length === 0) {
+    @if (vista() === 'organizadas') {
+      <p>No organizas ninguna reserva. <a routerLink="/reservas/nueva">Crea una nueva reserva</a>.</p>
+    } @else {
+      <p>No has aceptado ninguna invitación. Las que tengas sin responder están en «Pendientes por responder».</p>
+    }
+  } @else {
+    <div class="tabla-desplazable" role="region" aria-labelledby="caption-mis-reservas" tabindex="0">
+      <table>
+        <caption id="caption-mis-reservas" #captionRef class="visualmente-oculto" tabindex="-1">
+          {{ vista() === 'organizadas' ? 'Reservas que organizas' : 'Reservas a las que asistes' }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Sala</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Inicio</th>
+            <th scope="col">Fin</th>
+            @if (vista() === 'invitado') {
+              <th scope="col">Organizador</th>
+            }
+            <th scope="col">Motivo</th>
+            <th scope="col"><span class="visualmente-oculto">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (reserva of reservasPagina(); track reserva.id) {
+            <tr>
+              <td>{{ nombreSala(reserva.salaId) }}</td>
+              <td>{{ reserva.fecha | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ reserva.horaInicio | hora }}</td>
+              <td>{{ reserva.horaFin | hora }}</td>
+              @if (vista() === 'invitado') {
+                <td>{{ reserva.responsable }}</td>
+              }
+              <td>{{ reserva.motivo }}</td>
+              <td>
+                <a [routerLink]="['/reservas', reserva.id]">
+                  Ver<span class="visualmente-oculto">
+                    la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las
+                    {{ reserva.horaInicio | hora }}</span
+                  >
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <div class="paginacion">
+    @if (totalPaginas() > 1 && !error()) {
+      <nav aria-label="Paginación de mis reservas" class="paginacion-controles">
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="paginaActual() === 0"
+          (click)="irAPagina(paginaActual() - 1)"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          class="boton-secundario"
+          [disabled]="paginaActual() >= totalPaginas() - 1"
+          (click)="irAPagina(paginaActual() + 1)"
+        >
+          Siguiente
+        </button>
+      </nav>
+    }
+    <p class="paginacion-estado" aria-live="polite">{{ textoPaginacion() }}</p>
+  </div>
+</section>

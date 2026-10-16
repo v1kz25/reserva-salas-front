@@ -1,0 +1,176 @@
+<section class="bloque" aria-labelledby="titulo-asistentes">
+  <h2 id="titulo-asistentes" tabindex="-1">Asistentes</h2>
+
+  <p class="plazas">
+    Plazas ocupadas:
+    @if (capacidad() !== undefined) {
+      <strong>{{ plazasOcupadas() }} de {{ capacidad() }}</strong>
+    } @else {
+      <strong>{{ plazasOcupadas() }}</strong>
+    }
+    <span class="ayuda"> (cuentan el organizador y las invitaciones pendientes y aceptadas)</span>
+  </p>
+
+  @if (miInvitacion(); as mia) {
+    <section class="subbloque" aria-labelledby="titulo-mi-invitacion">
+      <h3 id="titulo-mi-invitacion">Tu invitación</h3>
+      <p>
+        Estado: <strong>{{ estadoInvitacion[mia.estado] }}</strong>
+        @switch (mia.estado) {
+          @case ('PENDIENTE') {
+            <span class="ayuda"> — aún no has respondido.</span>
+          }
+          @case ('ACEPTADA') {
+            <span class="ayuda"> — asistirás a la reserva.</span>
+          }
+          @case ('RECHAZADA') {
+            <span class="ayuda"> — no asistirás a la reserva.</span>
+          }
+        }
+      </p>
+      @if (mia.estado !== 'RECHAZADA') {
+        <div class="acciones">
+          @if (mia.estado === 'PENDIENTE') {
+            <button
+              type="button"
+              class="boton"
+              [attr.aria-disabled]="inactivo()"
+              [attr.aria-busy]="enCurso('aceptar-' + mia.id)"
+              (click)="aceptar()"
+            >
+              {{ enCurso('aceptar-' + mia.id) ? 'Aceptando…' : 'Aceptar' }}<span class="visualmente-oculto">
+                la invitación</span
+              >
+            </button>
+            <button
+              type="button"
+              class="boton-secundario"
+              [attr.aria-disabled]="inactivo()"
+              [attr.aria-busy]="enCurso('rechazar-' + mia.id)"
+              (click)="rechazar()"
+            >
+              {{ enCurso('rechazar-' + mia.id) ? 'Rechazando…' : 'Rechazar' }}<span class="visualmente-oculto">
+                la invitación</span
+              >
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="boton-secundario"
+              [attr.aria-disabled]="inactivo()"
+              [attr.aria-busy]="enCurso('rechazar-' + mia.id)"
+              (click)="pedirRechazo()"
+            >
+              {{ enCurso('rechazar-' + mia.id) ? 'Enviando…' : 'Dejar de asistir' }}
+            </button>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  @for (grupo of grupos(); track grupo.estado) {
+    <section class="subbloque" [attr.aria-labelledby]="'titulo-invitaciones-' + grupo.estado">
+      <h3 [id]="'titulo-invitaciones-' + grupo.estado">
+        {{ grupo.titulo }} <span class="contador">({{ grupo.invitaciones.length }})</span>
+      </h3>
+      <ul class="lista">
+        @for (invitacion of grupo.invitaciones; track invitacion.id) {
+          <li class="fila">
+            <span>{{ invitacion.nombre }}</span>
+            @if (esOrganizador() && !pasada()) {
+              <button
+                type="button"
+                class="boton-secundario boton-tabla"
+                [attr.aria-disabled]="inactivo()"
+                (click)="pedirRetirada(invitacion)"
+              >
+                Retirar<span class="visualmente-oculto"> la invitación de {{ invitacion.nombre }}</span>
+              </button>
+            }
+          </li>
+        } @empty {
+          <li>{{ grupo.vacio }}</li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (esOrganizador()) {
+    <section class="subbloque" aria-labelledby="titulo-invitar">
+      <h3 id="titulo-invitar">Invitar a un amigo</h3>
+      @if (pasada()) {
+        <p>La reserva ya ha pasado: no se pueden enviar ni retirar invitaciones.</p>
+      } @else if (completa()) {
+        <p>La sala está completa: no puedes invitar a nadie más salvo que retires alguna invitación.</p>
+      } @else if (errorAmigos()) {
+        <p class="error" role="alert">No se han podido cargar tus amigos: {{ errorAmigos() }}</p>
+      } @else if (amigos() === undefined) {
+        <p aria-live="polite">Cargando amigos…</p>
+      } @else if (amigos()?.length === 0) {
+        <p>Aún no tienes amigos a los que invitar. <a routerLink="/amigos">Busca personas en «Amigos»</a>.</p>
+      } @else if (amigosDisponibles().length === 0) {
+        <p>Ya has invitado a todos tus amigos.</p>
+      } @else {
+        <form class="invitar" aria-labelledby="titulo-invitar" (submit)="$event.preventDefault(); invitar()">
+          <div class="campo">
+            <label for="invitar-amigo">Amigo</label>
+            <select
+              #selectorAmigo
+              id="invitar-amigo"
+              [formControl]="amigoElegido"
+              [attr.aria-invalid]="errorSeleccion() !== undefined"
+              aria-describedby="invitar-amigo-error"
+            >
+              <option [ngValue]="null">Elige un amigo</option>
+              @for (amigo of amigosDisponibles(); track amigo.usuarioId) {
+                <option [ngValue]="amigo.usuarioId">{{ amigo.nombre }}</option>
+              }
+            </select>
+          </div>
+          <button type="submit" class="boton" [attr.aria-disabled]="inactivo()" [attr.aria-busy]="enCurso('invitar')">
+            {{ enCurso('invitar') ? 'Invitando…' : 'Invitar' }}
+          </button>
+          <div id="invitar-amigo-error" class="invitar-error" aria-live="polite">
+            @if (errorSeleccion()) {
+              <p class="error">{{ errorSeleccion() }}</p>
+            }
+          </div>
+        </form>
+      }
+    </section>
+  }
+
+  <app-dialogo-confirmacion
+    titulo="Retirar invitación"
+    textoConfirmar="Sí, retirar la invitación"
+    textoProcesando="Retirando…"
+    textoVolver="No, mantener la invitación"
+    [abierto]="invitacionARetirar() !== undefined"
+    [procesando]="ocupado()"
+    (confirmado)="confirmarRetirada()"
+    (cancelado)="cerrarDialogo()"
+  >
+    @if (invitacionARetirar(); as pendiente) {
+      <p>
+        ¿Seguro que quieres retirar la invitación de <strong>{{ pendiente.nombre }}</strong> a la reserva de
+        {{ nombreSala() }}?
+      </p>
+      <p>Dejará de ver los detalles de la reserva y su plaza quedará libre.</p>
+    }
+  </app-dialogo-confirmacion>
+
+  <app-dialogo-confirmacion
+    titulo="Dejar de asistir"
+    textoConfirmar="Sí, dejar de asistir"
+    textoProcesando="Enviando…"
+    textoVolver="No, seguir asistiendo"
+    [abierto]="dialogoDejarAbierto()"
+    [procesando]="ocupado()"
+    (confirmado)="rechazar()"
+    (cancelado)="cerrarDialogoDejar()"
+  >
+    <p>¿Seguro que quieres dejar de asistir a la reserva de {{ nombreSala() }}?</p>
+    <p>Tu plaza quedará libre y dejarás de ver los detalles de la reserva.</p>
+  </app-dialogo-confirmacion>
+</section>

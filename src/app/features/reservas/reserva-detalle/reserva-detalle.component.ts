@@ -6,13 +6,14 @@ import {
   ElementRef,
   Injector,
   afterNextRender,
+  computed,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EMPTY, Observable, catchError, defaultIfEmpty, map, of, switchMap } from 'rxjs';
+import { EMPTY, Observable, Subject, catchError, defaultIfEmpty, map, merge, of, switchMap } from 'rxjs';
 
 import { aProblemDetail } from '../../../core/http/problem-detail';
 import { Reserva } from '../../../core/models/reserva.model';
@@ -23,15 +24,29 @@ import { SesionService } from '../../../core/services/sesion.service';
 import { DialogoConfirmacionComponent } from '../../../shared/components/dialogo-confirmacion/dialogo-confirmacion.component';
 import { HoraPipe } from '../../../shared/pipes/hora.pipe';
 import { focoPerdido } from '../../../shared/utils/foco';
-import { AVISO_RESERVA_CANCELADA, CLAVE_AVISO, MENSAJE_CANCELACION_SIN_PERMISO } from '../reserva-cancelacion';
+import { ReservaAsistentesComponent, ResultadoAsistentes } from '../reserva-asistentes/reserva-asistentes.component';
+import {
+  AVISO_RESERVA_CANCELADA,
+  CLAVE_AVISO,
+  MENSAJE_CANCELACION_SIN_PERMISO,
+  MENSAJE_RECARGA_RESERVA_FALLIDA,
+} from '../reserva-cancelacion';
+
+/** Id del título de la sección «Asistentes», que recibe el foco si se pierde tras una acción. */
+const ID_TITULO_ASISTENTES = 'titulo-asistentes';
 
 /**
  * ReservaDetalleComponent — muestra los datos de una reserva y permite cancelarla
  * tras confirmarlo en un diálogo, si es del usuario o si es administrador.
+ *
+ * Si el usuario no participa (`detalle: OCUPADA`) solo muestra sala, fecha y franja, con el
+ * estado «Ocupada». Con `detalle: COMPLETO` añade la sección «Asistentes» (invitaciones y
+ * plazas), desde la que el organizador invita y retira invitaciones y el invitado responde.
+ * Tras cada acción la reserva se recarga sin mostrar el estado de carga.
  */
 @Component({
   selector: 'app-reserva-detalle',
-  imports: [RouterLink, DatePipe, HoraPipe, DialogoConfirmacionComponent],
+  imports: [RouterLink, DatePipe, HoraPipe, DialogoConfirmacionComponent, ReservaAsistentesComponent],
   templateUrl: './reserva-detalle.component.html',
   styleUrl: './reserva-detalle.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,11 +55,23 @@ export class ReservaDetalleComponent {
   /** Título de la página, que recibe el foco si el elemento enfocado desaparece al cancelar. */
   private readonly tituloRef = viewChild.required<ElementRef<HTMLHeadingElement>>('tituloRef');
 
+  /** Sección «Asistentes», para saber si tiene una acción en curso. */
+  private readonly asistentes = viewChild(ReservaAsistentesComponent);
+
   /** Reserva mostrada, una vez cargada. */
   protected readonly reserva = signal<Reserva | undefined>(undefined);
 
-  /** Nombre de la sala de la reserva, si se ha podido resolver. */
-  protected readonly nombreSala = signal<string | undefined>(undefined);
+  /** Sala de la reserva, si se ha podido cargar. */
+  protected readonly sala = signal<Sala | undefined>(undefined);
+
+  /** Mensaje de éxito de la última acción sobre los asistentes, si lo hay. */
+  protected readonly aviso = signal<string | undefined>(undefined);
+
+  /** Mensaje de error de la última acción sobre los asistentes, si lo hay. */
+  protected readonly errorAccion = signal<string | undefined>(undefined);
+
+  /** Aviso si falla la recarga silenciosa (se conserva la reserva mostrada). */
+  protected readonly errorRecarga = signal<string | undefined>(undefined);
 
   /** Indica si se está cargando la reserva. */
   protected readonly cargando = signal(true);
@@ -74,22 +101,54 @@ export class ReservaDetalleComponent {
   private readonly salasService = inject(SalasService);
   private readonly injector = inject(Injector);
 
+  /** Nombre de la sala de la reserva, o «Sala N» si no se ha podido resolver. */
+  protected readonly nombreSala = computed(() => {
+    const reserva = this.reserva();
+    return this.sala()?.nombre ?? (reserva ? `Sala ${reserva.salaId}` : undefined);
+  });
+
+  /** Peticiones de recarga silenciosa de la reserva mostrada (tras una acción sobre los asistentes). */
+  private readonly recargas = new Subject<void>();
+
   constructor() {
-    this.route.paramMap
+    const cambiosDeRuta = this.route.paramMap.pipe(map((params) => ({ id: Number(params.get('id')), silenciosa: false })));
+    const recargas = this.recargas.pipe(
+      map(() => ({ id: this.reserva()?.id ?? Number.NaN, silenciosa: true })),
+    );
+    merge(cambiosDeRuta, recargas)
       .pipe(
-        map((params) => Number(params.get('id'))),
-        switchMap((id) => this.cargar(id)),
+        switchMap(({ id, silenciosa }) => (silenciosa ? this.recargar(id) : this.cargar(id))),
         takeUntilDestroyed(),
       )
       .subscribe();
   }
 
   /**
-   * Abre el diálogo de confirmación de la cancelación.
+   * Abre el diálogo de confirmación de la cancelación, salvo que haya otra acción en curso.
    */
   pedirCancelacion(): void {
+    if (this.asistentes()?.ocupado()) {
+      return;
+    }
     this.errorCancelacion.set(undefined);
     this.dialogoAbierto.set(true);
+  }
+
+  /**
+   * Muestra el resultado de una acción sobre los asistentes y, si hace falta, recarga la
+   * reserva sin mostrar el estado de carga.
+   *
+   * @param resultado Resultado de la acción.
+   */
+  alActuarSobreAsistentes(resultado: ResultadoAsistentes): void {
+    this.aviso.set(resultado.aviso);
+    this.errorAccion.set(resultado.error);
+    this.errorCancelacion.set(undefined);
+    if (resultado.recargar) {
+      this.recargas.next();
+    } else {
+      this.recuperarFoco();
+    }
   }
 
   /**
@@ -144,10 +203,10 @@ export class ReservaDetalleComponent {
       return EMPTY;
     }
     return this.reservasService.obtener(id).pipe(
-      switchMap((reserva) => this.nombreDeSala(reserva.salaId).pipe(map((nombre) => ({ reserva, nombre })))),
-      map(({ reserva, nombre }) => {
+      switchMap((reserva) => this.salaDe(reserva.salaId).pipe(map((sala) => ({ reserva, sala })))),
+      map(({ reserva, sala }) => {
         this.reserva.set(reserva);
-        this.nombreSala.set(nombre);
+        this.sala.set(sala);
         this.cargando.set(false);
         return reserva;
       }),
@@ -165,15 +224,47 @@ export class ReservaDetalleComponent {
   }
 
   /**
-   * Nombre de la sala, o «Sala N» si no se encuentra o no se pueden cargar las salas
+   * Recarga la reserva mostrada sin estado de carga y conservando la sala. Si ya no existe
+   * (`404`), lo indica; si falla por otro motivo, avisa y conserva la reserva mostrada. Al
+   * terminar, recupera el foco si se ha perdido (por ejemplo, al quitar una invitación).
+   *
+   * @param id Identificador de la reserva mostrada.
+   */
+  private recargar(id: number): Observable<unknown> {
+    this.errorRecarga.set(undefined);
+    if (!Number.isSafeInteger(id)) {
+      return EMPTY;
+    }
+    return this.reservasService.obtener(id).pipe(
+      map((reserva) => {
+        this.reserva.set(reserva);
+        this.recuperarFoco();
+        return reserva;
+      }),
+      catchError((err: unknown) => {
+        const problema = aProblemDetail(err);
+        if (problema.status === 404) {
+          this.aviso.set(undefined);
+          this.errorAccion.set(undefined);
+          this.marcarNoEncontrada();
+        } else {
+          this.errorRecarga.set(MENSAJE_RECARGA_RESERVA_FALLIDA);
+        }
+        this.recuperarFoco();
+        return EMPTY;
+      }),
+    );
+  }
+
+  /**
+   * Sala de la reserva, o `undefined` si no se encuentra o no se pueden cargar las salas
    * (también si el interceptor corta la petición sin emitir).
    */
-  private nombreDeSala(salaId: number): Observable<string> {
-    const porDefecto = `Sala ${salaId}`;
+  private salaDe(salaId: number): Observable<Sala | undefined> {
     return this.salasService.listar().pipe(
-      map((salas: Sala[]) => salas.find((sala) => sala.id === salaId)?.nombre ?? porDefecto),
-      catchError(() => of(porDefecto)),
-      defaultIfEmpty(porDefecto),
+      map((salas: Sala[]) => salas.find((sala) => sala.id === salaId)),
+      catchError(() => of(undefined)),
+      defaultIfEmpty(undefined),
     );
   }
 
@@ -196,7 +287,10 @@ export class ReservaDetalleComponent {
 
   private reiniciar(): void {
     this.reserva.set(undefined);
-    this.nombreSala.set(undefined);
+    this.sala.set(undefined);
+    this.aviso.set(undefined);
+    this.errorAccion.set(undefined);
+    this.errorRecarga.set(undefined);
     this.noEncontrada.set(false);
     this.error.set(undefined);
     this.errorCancelacion.set(undefined);
@@ -205,13 +299,17 @@ export class ReservaDetalleComponent {
     this.cargando.set(true);
   }
 
-  /** Si el foco se ha perdido (botón desaparecido o diálogo cerrado), lo lleva al título. */
+  /**
+   * Si el foco se ha perdido (botón desaparecido o diálogo cerrado), lo lleva al título de
+   * «Asistentes» si sigue en la página o, si no, al de la página.
+   */
   private recuperarFoco(): void {
     afterNextRender(
       () => {
         const titulo = this.tituloRef().nativeElement;
-        if (focoPerdido(titulo.ownerDocument)) {
-          titulo.focus();
+        const documento = titulo.ownerDocument;
+        if (focoPerdido(documento)) {
+          (documento.getElementById(ID_TITULO_ASISTENTES) ?? titulo).focus();
         }
       },
       { injector: this.injector },

@@ -25,6 +25,7 @@ import { SalasService } from '../../../core/services/salas.service';
 import { SesionService } from '../../../core/services/sesion.service';
 import { DialogoConfirmacionComponent } from '../../../shared/components/dialogo-confirmacion/dialogo-confirmacion.component';
 import { HoraPipe } from '../../../shared/pipes/hora.pipe';
+import { InvitacionesPendientesComponent } from '../../invitaciones/invitaciones-pendientes/invitaciones-pendientes.component';
 import { focoPerdido } from '../../../shared/utils/foco';
 import {
   AVISO_RESERVA_CANCELADA,
@@ -41,10 +42,22 @@ import { rangoFechasValidator } from './reserva-list.validators';
  * Los filtros y la página se guardan en la query de la URL (`page` en base 1), así que recargar
  * o volver atrás conserva el listado. El botón «Cancelar» solo aparece en las reservas del
  * usuario o si es administrador.
+ *
+ * Las reservas en las que el usuario no participa (`detalle: OCUPADA`) solo muestran sala, fecha
+ * y franja, con «Ocupada» en lugar del responsable y el motivo, y sin «Ver» ni «Cancelar».
+ * Encima del listado aparecen las invitaciones pendientes de responder, si las hay; al
+ * responder una, el listado se recarga sin refrescar la página.
  */
 @Component({
   selector: 'app-reserva-list',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, HoraPipe, DialogoConfirmacionComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    DatePipe,
+    HoraPipe,
+    DialogoConfirmacionComponent,
+    InvitacionesPendientesComponent,
+  ],
   templateUrl: './reserva-list.component.html',
   styleUrl: './reserva-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -238,6 +251,14 @@ export class ReservaListComponent {
       return '—';
     }
     return this.nombresSala().get(salaId) ?? `Sala ${salaId}`;
+  }
+
+  /**
+   * Recarga la página actual del listado sin mostrar el estado de carga (por ejemplo, tras
+   * responder a una invitación, que cambia lo que el usuario puede ver).
+   */
+  recargarSinAviso(): void {
+    this.cargas.next(true);
   }
 
   /**

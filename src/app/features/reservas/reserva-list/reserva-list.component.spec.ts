@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 
 import { SesionService } from '../../../core/services/sesion.service';
 import { ReservaListComponent } from './reserva-list.component';
+import { SOLO_INVITACIONES_PENDIENTES, descartarPeticionesDeFondo } from '../../../testing/peticiones-de-fondo';
 
 const SALAS = [
   { id: 1, nombre: 'Sala Norte', capacidad: 10, planta: 1 },
@@ -23,7 +24,7 @@ const pagina = (content: unknown[], number = 0, totalPages = content.length > 0 
 /** Parámetros de la petición sin los de paginación (`page` y `size`). */
 const clavesFiltro = (req: TestRequest) => req.request.params.keys().filter((k) => k !== 'page' && k !== 'size');
 const RESERVAS = [
-  { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' },
+  { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', detalle: 'COMPLETO', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' },
 ];
 
 describe('ReservaListComponent', () => {
@@ -49,7 +50,10 @@ describe('ReservaListComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    descartarPeticionesDeFondo(http, SOLO_INVITACIONES_PENDIENTES);
+    http.verify();
+  });
 
   function cargar(reservas: unknown[] = RESERVAS, salas: unknown[] = SALAS): void {
     http.expectOne('/api/salas').flush(salas);
@@ -373,7 +377,7 @@ describe('ReservaListComponent', () => {
   });
 
   describe('ver y cancelar', () => {
-    const OTRA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', usuarioId: 1, responsable: 'Luis', motivo: 'Demo' };
+    const OTRA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', detalle: 'COMPLETO', usuarioId: 1, responsable: 'Luis', motivo: 'Demo' };
     const filas = () => el.querySelectorAll('tbody tr').length;
     const dialogo = () => el.querySelector('dialog') as HTMLDialogElement;
     const botonFila = (n = 0) =>
@@ -589,6 +593,7 @@ describe('ReservaListComponent con aviso de navegación', () => {
 
   afterEach(() => {
     history.replaceState(estadoOriginal, '');
+    descartarPeticionesDeFondo(http, SOLO_INVITACIONES_PENDIENTES);
     http.verify();
   });
 

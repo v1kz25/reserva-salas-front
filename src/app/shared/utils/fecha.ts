@@ -78,3 +78,21 @@ export function fechaLegible(iso: string): string {
   const [anio, mes, dia] = iso.split('-');
   return `${dia}/${mes}/${anio}`;
 }
+
+/**
+ * Devuelve la hora de un instante en una zona horaria, en formato `HH:mm`. Sin zona, o si la
+ * zona no es válida, usa la del navegador.
+ *
+ * @param fecha Instante a convertir.
+ * @param zona Identificador IANA de la zona horaria.
+ */
+export function horaEnZona(fecha: Date, zona?: string): string {
+  const partes = new Intl.DateTimeFormat('en-GB', {
+    timeZone: esZonaValida(zona) ? zona : undefined,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(fecha);
+  const parte = (tipo: Intl.DateTimeFormatPartTypes) => partes.find((p) => p.type === tipo)?.value ?? '00';
+  return `${parte('hour')}:${parte('minute')}`;
+}
