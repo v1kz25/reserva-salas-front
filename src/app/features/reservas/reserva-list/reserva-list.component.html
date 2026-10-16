@@ -4,6 +4,8 @@
     <a routerLink="/reservas/nueva" class="boton">Nueva reserva</a>
   </header>
 
+  <app-invitaciones-pendientes [salas]="salas()" [ocultarSiVacia]="true" (respondida)="recargarSinAviso()" />
+
   <form [formGroup]="filtros" class="filtros" role="search" aria-label="Filtrar reservas">
     <div class="campo">
       <label for="filtro-sala">Sala</label>
@@ -82,33 +84,41 @@
         </thead>
         <tbody>
           @for (reserva of reservas(); track reserva.id) {
-            <tr>
+            <tr [class.ocupada]="reserva.detalle === 'OCUPADA'">
               <td>{{ nombreSala(reserva.salaId) }}</td>
               <td>{{ reserva.fecha | date: 'dd/MM/yyyy' }}</td>
               <td>{{ reserva.horaInicio | hora }}</td>
               <td>{{ reserva.horaFin | hora }}</td>
-              <td>{{ reserva.responsable }}</td>
-              <td>{{ reserva.motivo }}</td>
-              <td>
-                <div class="acciones">
-                  <a
-                    [routerLink]="['/reservas', reserva.id]"
-                    attr.aria-label="Ver la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
-                  >
-                    Ver
-                  </a>
-                  @if (sesion.puedeGestionar(reserva.usuarioId)) {
-                    <button
-                      type="button"
-                      class="boton-secundario boton-tabla"
-                      attr.aria-label="Cancelar la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
-                      (click)="pedirCancelacion(reserva)"
+              @if (reserva.detalle === 'OCUPADA') {
+                <td colspan="2">
+                  <span class="texto-ocupada">Ocupada</span
+                  ><span class="visualmente-oculto"> (no participas: sus datos son privados)</span>
+                </td>
+                <td></td>
+              } @else {
+                <td>{{ reserva.responsable }}</td>
+                <td>{{ reserva.motivo }}</td>
+                <td>
+                  <div class="acciones">
+                    <a
+                      [routerLink]="['/reservas', reserva.id]"
+                      attr.aria-label="Ver la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
                     >
-                      Cancelar
-                    </button>
-                  }
-                </div>
-              </td>
+                      Ver
+                    </a>
+                    @if (sesion.puedeGestionar(reserva.usuarioId)) {
+                      <button
+                        type="button"
+                        class="boton-secundario boton-tabla"
+                        attr.aria-label="Cancelar la reserva de {{ nombreSala(reserva.salaId) }} del {{ reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ reserva.horaInicio | hora }}"
+                        (click)="pedirCancelacion(reserva)"
+                      >
+                        Cancelar
+                      </button>
+                    }
+                  </div>
+                </td>
+              }
             </tr>
           } @empty {
             <tr>

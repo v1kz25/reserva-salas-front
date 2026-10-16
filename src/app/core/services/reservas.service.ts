@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 import { conErroresPropios } from '../http/errores-propios';
 import {
@@ -8,6 +8,7 @@ import {
   PaginaReservas,
   Reserva,
   ReservaRequest,
+  RolMisReservas,
   TAMANO_PAGINA_RESERVAS,
 } from '../models/reserva.model';
 
@@ -47,6 +48,33 @@ export class ReservasService {
   }
 
   /**
+   * Lista una página de «Mis reservas» con un papel concreto
+   * (`GET /api/reservas?mis=true&rol=…`), siempre con `detalle: COMPLETO`.
+   *
+   * @param rol Papel del usuario: organizadas, invitaciones aceptadas o pendientes.
+   * @param pagina Página que se pide, empezando en 0.
+   * @param tamano Número de reservas por página (la API admite hasta 100).
+   */
+  listarMias(rol: RolMisReservas, pagina = 0, tamano = TAMANO_PAGINA_RESERVAS): Observable<PaginaReservas> {
+    const params = new HttpParams().set('mis', true).set('rol', rol).set('page', pagina).set('size', tamano);
+    return this.http.get<PaginaReservas>(this.url, { params });
+  }
+
+  /**
+   * Cuenta las reservas de «Mis reservas» con un papel concreto pidiendo una página de tamaño 1
+   * y leyendo su `totalElements`. Es solo para los contadores: el interceptor no actúa sobre
+   * ningún error (`'todos'`) y quien llama decide qué hacer si falla.
+   *
+   * @param rol Papel del usuario.
+   */
+  contarMias(rol: RolMisReservas): Observable<number> {
+    const params = new HttpParams().set('mis', true).set('rol', rol).set('page', 0).set('size', 1);
+    return this.http
+      .get<PaginaReservas>(this.url, { params, context: conErroresPropios('todos') })
+      .pipe(map((pagina) => pagina.totalElements));
+  }
+
+  /**
    * Crea una reserva (`POST /api/reservas`).
    *
    * @param reserva Datos de la reserva.
@@ -56,7 +84,8 @@ export class ReservasService {
   }
 
   /**
-   * Obtiene una reserva por su id (`GET /api/reservas/{id}`).
+   * Obtiene una reserva por su id (`GET /api/reservas/{id}`). Con `detalle: COMPLETO` trae
+   * las invitaciones; con `OCUPADA`, solo sala, fecha y franja.
    *
    * @param id Identificador de la reserva.
    */

@@ -4,6 +4,7 @@ import {
   fechaIso,
   fechaIsoEnZona,
   fechaLegible,
+  horaEnZona,
   zonaNavegador,
 } from './fecha';
 
@@ -116,5 +117,34 @@ describe('fecha utils con zona horaria', () => {
     it('convierte a dd/MM/yyyy', () => {
       expect(fechaLegible('2026-10-05')).toBe('05/10/2026');
     });
+  });
+});
+
+describe('horaEnZona', () => {
+  // 2026-10-10T23:30:00Z: en Kiritimati (UTC+14) ya es el 11 a las 13:30; en Los Ángeles (UTC-7), el 10 a las 16:30.
+  const instante = new Date('2026-10-10T23:30:00Z');
+
+  it('devuelve la hora HH:mm en una zona por delante de UTC, cruzando al día siguiente', () => {
+    expect(horaEnZona(instante, 'Pacific/Kiritimati')).toBe('13:30');
+    expect(fechaIsoEnZona(instante, 'Pacific/Kiritimati')).toBe('2026-10-11');
+  });
+
+  it('devuelve la hora HH:mm en una zona por detrás de UTC', () => {
+    expect(horaEnZona(instante, 'America/Los_Angeles')).toBe('16:30');
+    expect(fechaIsoEnZona(instante, 'America/Los_Angeles')).toBe('2026-10-10');
+  });
+
+  it('la medianoche se escribe 00:00, no 24:00', () => {
+    expect(horaEnZona(new Date('2026-10-10T00:00:00Z'), 'UTC')).toBe('00:00');
+  });
+
+  it('rellena con ceros horas y minutos', () => {
+    expect(horaEnZona(new Date('2026-10-10T07:05:00Z'), 'UTC')).toBe('07:05');
+  });
+
+  it('sin zona, o con una zona no válida, usa la del navegador', () => {
+    const local = new Date(2026, 9, 10, 9, 7);
+    expect(horaEnZona(local)).toBe('09:07');
+    expect(horaEnZona(local, 'No/Existe')).toBe('09:07');
   });
 });

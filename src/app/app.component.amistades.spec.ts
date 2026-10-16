@@ -7,6 +7,7 @@ import { AppComponent } from './app.component';
 import { SolicitudAmistad } from './core/models/amistad.model';
 import { Usuario } from './core/models/usuario.model';
 import { SesionService } from './core/services/sesion.service';
+import { PETICIONES_DE_SESION, descartarPeticionesDeFondo } from './testing/peticiones-de-fondo';
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 const ADMIN: Usuario = { id: 9, email: 'admin@example.com', nombre: 'Admin', rol: 'ADMIN' };
@@ -35,7 +36,10 @@ describe('AppComponent: enlace «Amigos» de la cabecera', () => {
     el = fixture.nativeElement as HTMLElement;
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    descartarPeticionesDeFondo(http, PETICIONES_DE_SESION);
+    http.verify();
+  });
 
   const nav = () => el.querySelector('nav[aria-label="Principal"]');
   const enlace = () => nav()?.querySelector('a[href="/amigos"]') ?? null;

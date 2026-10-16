@@ -1,0 +1,89 @@
+<div role="status">
+  @if (aviso()) {
+    <p class="exito">{{ aviso() }}</p>
+  }
+</div>
+
+@if (visible()) {
+  <section class="bloque" aria-labelledby="titulo-invitaciones-pendientes">
+    <h2 id="titulo-invitaciones-pendientes" #tituloRef tabindex="-1">
+      Pendientes de responder
+      @if (invitaciones().length > 0) {
+        <span class="contador">({{ invitaciones().length }})</span>
+      }
+    </h2>
+
+    @if (errorAccion()) {
+      <p class="error-general" role="alert">{{ errorAccion() }}</p>
+    }
+
+    @if (errorRecarga()) {
+      <p class="aviso" role="alert">{{ errorRecarga() }}</p>
+    }
+
+    @if (cargando()) {
+      <p aria-live="polite">Cargando invitaciones…</p>
+    } @else if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    } @else {
+      <ul class="lista">
+        @for (invitacion of invitaciones(); track invitacion.id) {
+          <li class="fila">
+            <span class="datos">
+              <span class="titulo-fila">
+                @if (nuevas().has(invitacion.id)) {
+                  <span class="marca-nueva">Nueva<span class="visualmente-oculto">:</span></span>
+                }
+                <strong>{{ nombreSala(invitacion.reserva.salaId) }}</strong>,
+                {{ invitacion.reserva.fecha | date: 'dd/MM/yyyy' }}, de {{ invitacion.reserva.horaInicio | hora }} a
+                {{ invitacion.reserva.horaFin | hora }}
+              </span>
+              <span class="detalle">
+                Organiza {{ invitacion.reserva.responsable }}
+                @if (invitacion.reserva.motivo) {
+                  · {{ invitacion.reserva.motivo }}
+                }
+              </span>
+            </span>
+            <span class="acciones">
+              <a [routerLink]="['/reservas', invitacion.reserva.id]">
+                Ver<span class="visualmente-oculto">
+                  la reserva de {{ nombreSala(invitacion.reserva.salaId) }} del
+                  {{ invitacion.reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ invitacion.reserva.horaInicio | hora }}</span
+                >
+              </a>
+              <button
+                type="button"
+                class="boton boton-tabla"
+                [attr.aria-disabled]="accionEnCurso() !== undefined"
+                [attr.aria-busy]="enCurso('aceptar-' + invitacion.id)"
+                (click)="aceptar(invitacion)"
+              >
+                {{ enCurso('aceptar-' + invitacion.id) ? 'Aceptando…' : 'Aceptar'
+                }}<span class="visualmente-oculto">
+                  la invitación a {{ nombreSala(invitacion.reserva.salaId) }} del
+                  {{ invitacion.reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ invitacion.reserva.horaInicio | hora }}</span
+                >
+              </button>
+              <button
+                type="button"
+                class="boton-secundario boton-tabla"
+                [attr.aria-disabled]="accionEnCurso() !== undefined"
+                [attr.aria-busy]="enCurso('rechazar-' + invitacion.id)"
+                (click)="rechazar(invitacion)"
+              >
+                {{ enCurso('rechazar-' + invitacion.id) ? 'Rechazando…' : 'Rechazar'
+                }}<span class="visualmente-oculto">
+                  la invitación a {{ nombreSala(invitacion.reserva.salaId) }} del
+                  {{ invitacion.reserva.fecha | date: 'dd/MM/yyyy' }} a las {{ invitacion.reserva.horaInicio | hora }}</span
+                >
+              </button>
+            </span>
+          </li>
+        } @empty {
+          <li>No tienes invitaciones pendientes de responder.</li>
+        }
+      </ul>
+    }
+  </section>
+}

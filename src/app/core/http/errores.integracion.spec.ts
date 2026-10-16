@@ -10,6 +10,7 @@ import { SesionService } from '../services/sesion.service';
 import { AHORA } from '../tokens/ahora.token';
 import { erroresInterceptor } from './errores.interceptor';
 import { UltimoErrorService } from './ultimo-error.service';
+import { SOLO_INVITACIONES_PENDIENTES, descartarPeticionesDeFondo } from '../../testing/peticiones-de-fondo';
 
 const SALAS = [{ id: 1, nombre: 'Sala Norte', capacidad: 10, planta: 1 }];
 
@@ -38,6 +39,7 @@ describe('gestión de errores (router real + componentes)', () => {
   afterEach(() => {
     // El formulario de reserva pide la zona horaria del servidor; aquí no influye.
     http.match('/api/config/zona-horaria');
+    descartarPeticionesDeFondo(http, SOLO_INVITACIONES_PENDIENTES);
     http.verify();
   });
 

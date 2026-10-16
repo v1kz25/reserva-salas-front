@@ -46,6 +46,13 @@ export const routes: Routes = [
       import('./features/reservas/reserva-detalle/reserva-detalle.component').then((m) => m.ReservaDetalleComponent),
   },
   {
+    path: 'mis-reservas',
+    title: 'Mis reservas',
+    canActivate: [sesionGuard],
+    loadComponent: () =>
+      import('./features/reservas/mis-reservas/mis-reservas.component').then((m) => m.MisReservasComponent),
+  },
+  {
     path: 'amigos',
     title: 'Amigos',
     canActivate: [sesionGuard],

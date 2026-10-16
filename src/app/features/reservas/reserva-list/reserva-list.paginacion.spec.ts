@@ -10,6 +10,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { Reserva } from '../../../core/models/reserva.model';
 import { SesionService } from '../../../core/services/sesion.service';
 import { ReservaListComponent } from './reserva-list.component';
+import { SOLO_INVITACIONES_PENDIENTES, descartarPeticionesDeFondo } from '../../../testing/peticiones-de-fondo';
 
 @Component({ template: 'otra pantalla' })
 class OtraComponent {}
@@ -29,6 +30,7 @@ function generar(n: number, desde = 1): Reserva[] {
     fecha: '2026-10-20',
     horaInicio: '09:00',
     horaFin: '10:00',
+    detalle: 'COMPLETO',
     usuarioId: 1,
     responsable: 'Ana',
     motivo: `Motivo ${desde + i}`,
@@ -142,7 +144,10 @@ describe('ReservaListComponent: paginación', () => {
     el = harness.fixture.nativeElement as HTMLElement;
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    descartarPeticionesDeFondo(http, SOLO_INVITACIONES_PENDIENTES);
+    http.verify();
+  });
 
   describe('navegación con 47 reservas', () => {
     it('la primera carga pide la página 0 con size 20 y muestra 20 filas', async () => {

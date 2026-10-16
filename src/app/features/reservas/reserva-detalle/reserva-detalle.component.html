@@ -15,18 +15,54 @@
       <dd>{{ datos.horaInicio | hora }}</dd>
       <dt>Fin</dt>
       <dd>{{ datos.horaFin | hora }}</dd>
-      <dt>Responsable</dt>
-      <dd>{{ datos.responsable }}</dd>
-      <dt>Motivo</dt>
-      <dd>{{ datos.motivo }}</dd>
+      @if (datos.detalle === 'OCUPADA') {
+        <dt>Estado</dt>
+        <dd><span class="texto-ocupada">Ocupada</span></dd>
+      } @else {
+        <dt>Responsable</dt>
+        <dd>{{ datos.responsable }}</dd>
+        <dt>Motivo</dt>
+        <dd>{{ datos.motivo }}</dd>
+      }
     </dl>
+
+    @if (datos.detalle === 'OCUPADA') {
+      <p>
+        Esta franja está reservada por otra persona. Solo el organizador, sus invitados y los administradores ven
+        los detalles de la reserva.
+      </p>
+    }
 
     <div class="acciones">
       <a routerLink="/reservas" class="boton-secundario">Volver al listado</a>
-      @if (sesion.puedeGestionar(datos.usuarioId)) {
+      @if (datos.detalle === 'COMPLETO' && sesion.puedeGestionar(datos.usuarioId)) {
         <button type="button" class="boton-peligro" (click)="pedirCancelacion()">Cancelar reserva</button>
       }
     </div>
+
+    <div role="status">
+      @if (aviso()) {
+        <p class="exito">{{ aviso() }}</p>
+      }
+    </div>
+
+    @if (errorAccion()) {
+      <p class="error-general" role="alert">{{ errorAccion() }}</p>
+    }
+
+    @if (errorRecarga()) {
+      <p class="aviso" role="alert">{{ errorRecarga() }}</p>
+    }
+
+    @if (datos.detalle === 'COMPLETO') {
+      <app-reserva-asistentes
+        [reserva]="datos"
+        [capacidad]="sala()?.capacidad"
+        [nombreSala]="nombreSala() ?? ''"
+        [bloqueado]="cancelando() || dialogoAbierto()"
+        (resultado)="alActuarSobreAsistentes($event)"
+      />
+    }
   } @else if (cargando()) {
     <p aria-live="polite">Cargando reserva…</p>
   } @else if (noEncontrada()) {

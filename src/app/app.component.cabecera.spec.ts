@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { AppComponent } from './app.component';
 import { Usuario } from './core/models/usuario.model';
 import { SesionService } from './core/services/sesion.service';
+import { PETICIONES_DE_SESION, descartarPeticionesDeFondo } from './testing/peticiones-de-fondo';
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 const ADMIN: Usuario = { id: 9, email: 'admin@example.com', nombre: 'Admin', rol: 'ADMIN' };
@@ -32,6 +33,7 @@ describe('AppComponent: cabecera con la sesión', () => {
   afterEach(() => {
     // Petición del indicador de solicitudes pendientes, que se lanza al haber sesión.
     http.match('/api/amistades/solicitudes/recibidas').forEach((req) => req.flush([]));
+    descartarPeticionesDeFondo(http, PETICIONES_DE_SESION);
     http.verify();
   });
 

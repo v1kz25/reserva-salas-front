@@ -7,10 +7,11 @@ import { Usuario } from '../../../core/models/usuario.model';
 import { SesionService } from '../../../core/services/sesion.service';
 import { MENSAJE_CANCELACION_SIN_PERMISO } from '../reserva-cancelacion';
 import { ReservaListComponent } from './reserva-list.component';
+import { SOLO_INVITACIONES_PENDIENTES, descartarPeticionesDeFondo } from '../../../testing/peticiones-de-fondo';
 
 const SALAS = [{ id: 1, nombre: 'Sala Norte', capacidad: 10, planta: 1 }];
-const PROPIA = { id: 10, salaId: 1, fecha: '2026-10-05', horaInicio: '09:00', horaFin: '10:00', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
-const AJENA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', usuarioId: 2, responsable: 'Luis', motivo: 'Demo' };
+const PROPIA = { id: 10, salaId: 1, fecha: '2026-10-05', horaInicio: '09:00', horaFin: '10:00', detalle: 'COMPLETO', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
+const AJENA = { id: 11, salaId: 1, fecha: '2026-10-06', horaInicio: '11:00', horaFin: '12:00', detalle: 'COMPLETO', usuarioId: 2, responsable: 'Luis', motivo: 'Demo' };
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 const ADMIN: Usuario = { id: 9, email: 'admin@example.com', nombre: 'Admin', rol: 'ADMIN' };
@@ -51,6 +52,7 @@ describe('ReservaListComponent: permisos de cancelación', () => {
   }
 
   afterEach(() => {
+    descartarPeticionesDeFondo(http, SOLO_INVITACIONES_PENDIENTES);
     http.verify();
     el.remove();
   });

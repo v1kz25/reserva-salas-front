@@ -1,0 +1,55 @@
+.bloque {
+  margin: 1.5rem 0;
+}
+
+.lista {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+
+  li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-borde);
+  }
+}
+
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detalle {
+  font-size: 0.875rem;
+  color: #4a4d52;
+}
+
+/* La marca lleva texto («Nueva»): no depende solo del color. Blanco sobre el azul primario: más de 4,5:1. */
+.marca-nueva {
+  display: inline-block;
+  padding: 0 0.375rem;
+  margin-right: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: #fff;
+  background: var(--color-primario);
+  border-radius: 0.625rem;
+}
+
+.contador {
+  font-weight: normal;
+}
+
+h2:focus {
+  outline: 2px solid var(--color-primario);
+  outline-offset: 2px;
+}

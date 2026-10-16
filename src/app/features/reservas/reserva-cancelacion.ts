@@ -14,5 +14,9 @@ export const MENSAJE_CANCELACION_SIN_PERMISO =
   'No se ha podido cancelar la reserva: no tienes permiso o tu sesión ha caducado. ' +
   'Recarga la página e inténtalo de nuevo.';
 
+/** Aviso si falla la recarga silenciosa del detalle de una reserva (se conservan los datos mostrados). */
+export const MENSAJE_RECARGA_RESERVA_FALLIDA =
+  'No se ha podido actualizar la reserva: puede que no esté al día. Recarga la página para verla actualizada.';
+
 /** Utilidades del aviso en el estado de navegación, compartidas con otras pantallas. */
 export { CLAVE_AVISO, leerAviso, limpiarAvisoDelHistorial } from '../../shared/utils/aviso-navegacion';

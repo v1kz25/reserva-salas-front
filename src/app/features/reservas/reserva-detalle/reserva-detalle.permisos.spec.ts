@@ -8,9 +8,10 @@ import { Usuario } from '../../../core/models/usuario.model';
 import { SesionService } from '../../../core/services/sesion.service';
 import { MENSAJE_CANCELACION_SIN_PERMISO } from '../reserva-cancelacion';
 import { ReservaDetalleComponent } from './reserva-detalle.component';
+import { descartarPeticionesDeFondo } from '../../../testing/peticiones-de-fondo';
 
 const SALAS = [{ id: 2, nombre: 'Sala Sur', capacidad: 4, planta: -1 }];
-const RESERVA = { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00', horaFin: '10:30', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
+const RESERVA = { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00', horaFin: '10:30', detalle: 'COMPLETO', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
 
 const ANA: Usuario = { id: 1, email: 'ana@example.com', nombre: 'Ana', rol: 'USER' };
 const LUIS: Usuario = { id: 2, email: 'luis@example.com', nombre: 'Luis', rol: 'USER' };
@@ -48,6 +49,7 @@ describe('ReservaDetalleComponent: permisos de cancelación', () => {
   }
 
   afterEach(() => {
+    descartarPeticionesDeFondo(http);
     http.verify();
     el.remove();
   });

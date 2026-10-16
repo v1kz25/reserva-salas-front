@@ -7,9 +7,10 @@ import { BehaviorSubject } from 'rxjs';
 import { SesionService } from '../../../core/services/sesion.service';
 import { AVISO_RESERVA_CANCELADA } from '../reserva-cancelacion';
 import { ReservaDetalleComponent } from './reserva-detalle.component';
+import { descartarPeticionesDeFondo } from '../../../testing/peticiones-de-fondo';
 
 const SALAS = [{ id: 2, nombre: 'Sala Sur', capacidad: 4, planta: -1 }];
-const RESERVA = { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
+const RESERVA = { id: 10, salaId: 2, fecha: '2026-10-05', horaInicio: '09:00:00', horaFin: '10:30', detalle: 'COMPLETO', usuarioId: 1, responsable: 'Ana', motivo: 'Daily' };
 
 describe('ReservaDetalleComponent', () => {
   let fixture: ComponentFixture<ReservaDetalleComponent>;
@@ -40,6 +41,7 @@ describe('ReservaDetalleComponent', () => {
   }
 
   afterEach(() => {
+    descartarPeticionesDeFondo(http);
     http.verify();
     el.remove();
   });
@@ -49,7 +51,12 @@ describe('ReservaDetalleComponent', () => {
     http.expectOne('/api/reservas/10').flush(RESERVA);
     http.expectOne('/api/salas').flush(SALAS);
     fixture.detectChanges();
+    descartarPeticionesDeFondo(http);
   }
+
+  /** Diálogo de cancelación (la sección «Asistentes» tiene otro, el de retirar invitaciones). */
+  const dialogoCancelar = () =>
+    Array.from(el.querySelectorAll('dialog')).find((d) => d.textContent?.includes('Cancelar reserva')) ?? null;
 
   const boton = (texto: string) =>
     Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes(texto)) as HTMLButtonElement;
@@ -115,8 +122,8 @@ describe('ReservaDetalleComponent', () => {
   it('«Cancelar reserva» abre el diálogo sin enviar nada', async () => {
     await cargada();
     await abrirDialogo();
-    expect(el.querySelector('dialog')?.open).toBeTrue();
-    expect(el.querySelector('dialog')?.textContent).toContain('Sala Sur');
+    expect(dialogoCancelar()?.open).toBeTrue();
+    expect(dialogoCancelar()?.textContent).toContain('Sala Sur');
     http.expectNone(() => true);
   });
 
@@ -126,7 +133,7 @@ describe('ReservaDetalleComponent', () => {
     boton('No, mantenerla').click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(el.querySelector('dialog')?.open).toBeFalse();
+    expect(dialogoCancelar()?.open).toBeFalse();
     expect(router.navigate).not.toHaveBeenCalled();
     http.expectNone(() => true);
   });
@@ -224,7 +231,7 @@ describe('ReservaDetalleComponent', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('Cargando reserva');
     expect(el.querySelector('dl')).toBeNull();
-    expect(el.querySelector('dialog')?.open).toBeFalse();
+    expect(dialogoCancelar()?.open).toBeFalse();
     http.expectOne('/api/reservas/11').flush({ ...RESERVA, id: 11, responsable: 'Luis' });
     http.expectOne('/api/salas').flush(SALAS);
     fixture.detectChanges();
